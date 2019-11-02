@@ -5,9 +5,57 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #2C001E;
+  color: #EEEEEE;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+.container {
+  display: flex;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+canvas {
+  border:1px solid #555753;
+  width: 640px;
+  height: 480px;
+}
+
+.gameArea {
+  margin: 24px;
+}
+
+.cpuArea, .codeArea, .ramArea, .instructions {
+  margin-left: 24px;
+  margin-right: 24px;
+}
+
+.codeArea, .ramArea {
+  margin-top: 24px;
+}
+
+.active {
+  color: forestgreen;
+  margin-left: 4px;
+}
+
+.inActive {
+  color: hotpink;
+  margin-left: 4px;
+}
+
+.current {
+  color: goldenrod;
+}
+
+h4 {
+  margin-top: 0;
 }
