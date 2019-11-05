@@ -28,7 +28,7 @@ export const instructions = {
   23: ['SLO', 'ZPX', 0, 6],
   24: ['CLC', 'IMP', 1, 2],
   25: ['ORA', 'ABY', 3, 4],
-  // 26: [ 'NOP', 'IMP', 1, 2 ],
+  26: [ 'NOP', 'IMP', 1, 2 ],
 
   27: ['SLO', 'ABY', 0, 7],
   // 28: [ 'NOP', 'ABX', 3, 4 ],
@@ -55,12 +55,12 @@ export const instructions = {
   48: ['BMI', 'REL', 2, 2],
   49: ['AND', 'IZY', 2, 5],
   // 50: [ 'KIL', 'IMP', 0, 2 ],
-  // 51: [ 'RLA', 'IZY', 0, 8 ],
-  // 52: [ 'NOP', 'ZPX', 2, 4 ],
+  51: [ 'RLA', 'IZY', 0, 8 ],
+  52: [ 'NOP', 'ZPX', 2, 4 ],
 
   53: ['AND', 'ZPX', 2, 4],
   54: ['ROL', 'ZPX', 2, 6],
-  // 55: [ 'RLA', 'ZPX', 0, 6 ],
+  55: [ 'RLA', 'ZPX', 0, 6 ],
   56: ['SEC', 'IMP', 1, 2],
   57: ['AND', 'ABY', 3, 4],
   // 58: [ 'NOP', 'IMP', 1, 2 ],
@@ -79,7 +79,7 @@ export const instructions = {
 
   69: ['EOR', 'ZP0', 2, 3],
   70: ['LSR', 'ZP0', 2, 5],
-  // 71: [ 'SRE', 'ZP0', 0, 5 ],
+  71: [ 'SRE', 'ZP0', 0, 5 ],
   72: ['PHA', 'IMP', 1, 3],
   73: ['EOR', 'IND', 2, 2],
   74: ['LSR', 'IMP', 1, 2],
@@ -128,7 +128,7 @@ export const instructions = {
   113: ['ADC', 'IZY', 2, 5],
   // 114: [ 'KIL', 'IMP', 0, 2 ],
   // 115: [ 'RRA', 'IZY', 0, 8 ],
-  // 116: [ 'NOP', 'ZPX', 2, 4 ],
+  116: [ 'NOP', 'ZPX', 2, 4 ],
 
   117: ['ADC', 'ZPX', 2, 4],
   118: ['ROR', 'ZPX', 2, 6],
@@ -142,7 +142,7 @@ export const instructions = {
 
   125: ['ADC', 'ABX', 3, 4],
   126: ['ROR', 'ABX', 3, 7],
-  // 127: [ 'RRA', 'ABX', 0, 7 ],
+  127: [ 'RRA', 'ABX', 0, 7 ],
   128: [ 'NOP', 'IND', 2, 2 ],
 
   129: ['STA', 'IZX', 2, 6],
@@ -231,7 +231,7 @@ export const instructions = {
   209: ['CMP', 'IZY', 2, 5],
   // 210: [ 'KIL', 'IMP', 0, 2 ],
   // 211: [ 'DCP', 'IZY', 0, 8 ],
-  // 212: [ 'NOP', 'ZPX', 2, 4 ],
+  212: [ 'NOP', 'ZPX', 2, 4 ],
 
   213: ['CMP', 'ZPX', 2, 4],
   214: ['DEC', 'ZPX', 2, 6],

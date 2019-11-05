@@ -44,6 +44,7 @@ class Cpu {
                     this.cycles = 1;
                     throw new Error('Cycles not defined for opcode', this.opcode)
                 }
+                //console.log(instruction.opcode, instruction.addrmode);
                 const additional_cycle1 = this[instruction.addrmode]();
                 const additional_cycle2 = this[instruction.opcode]();
 
@@ -52,6 +53,7 @@ class Cpu {
                 console.log('Unable to execute opcode: ' + this.opcode, e);
             }
         }
+        
         if (this.cycles !== 0)
             this.cycles--;
     }
@@ -73,7 +75,6 @@ class Cpu {
         this.fetched = 0x00;
 
         this.cycles = 8;
-        console.log('reset - done');
     }
 
     irq() {
@@ -127,11 +128,11 @@ class Cpu {
     }
 
     read(addr) {
-        return this.bus.read(addr, false);
+        return this.bus.cpuRead(addr, false);
     }
 
     write(addr, data) {
-        this.bus.write(addr, data);
+        this.bus.cpuWrite(addr, data);
     }
 
     getFlags() {
@@ -146,12 +147,10 @@ class Cpu {
         flags = flags | (this.u << 5);
         flags = flags | (this.v << 6);
         flags = flags | (this.n << 7);
-        console.log('getFlags', flags);
         return flags;
     }
 
     setFlags(value) {
-        console.log('setFlags', value);
         this.c = (value >> 0) & 1;
         this.z = (value >> 1) & 1;
         this.i = (value >> 2) & 1;
@@ -169,7 +168,6 @@ class Cpu {
 
             return { number, opcode, addrmode, size, cycles };
         } else {
-            console.log('instruction not defined', number);
             return { number, opcode: '???', addrmode: '???', size: 1, cycles: 1 };
         }
     }
@@ -825,7 +823,7 @@ class Cpu {
             let sInst = '$' + hex(addr, 4) + ': ';
 
             // Read instruction, and get its readable name
-            const id = this.bus.read(addr, true); addr++;
+            const id = this.bus.cpuRead(addr, true); addr++;
             const instruction = this.lookup(id);
             const opcode = instruction.opcode;
             const addrmode = instruction.addrmode;
@@ -838,46 +836,46 @@ class Cpu {
             if (addrmode === 'IMP') {
                 sInst += ' {IMP}';
             } else if (addrmode === 'IMM') {
-                value = this.bus.read(addr, true); addr++;
+                value = this.bus.cpuRead(addr, true); addr++;
                 sInst += '#$' + hex(value, 2) + ' {IMM}';
             } else if (addrmode === 'ZP0') {
-                lo = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
                 hi = 0x00;
                 sInst += '$' + hex(lo, 2) + ' {ZP0}';
             } else if (addrmode === 'ZPX') {
-                lo = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
                 hi = 0x00;
                 sInst += '$' + hex(lo, 2) + ', X {ZPX}';
             } else if (addrmode === 'ZPY') {
-                lo = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
                 hi = 0x00;
                 sInst += '$' + hex(lo, 2) + ', Y {ZPY}';
             } else if (addrmode === 'IZX') {
-                lo = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
                 hi = 0x00;
                 sInst += '($' + hex(lo, 2) + ', X) {IZX}';
             } else if (addrmode === 'IZY') {
-                lo = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
                 hi = 0x00;
                 sInst += '($' + hex(lo, 2) + '), Y {IZY}';
             } else if (addrmode === 'ABS') {
-                lo = this.bus.read(addr, true); addr++;
-                hi = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
+                hi = this.bus.cpuRead(addr, true); addr++;
                 sInst += '$' + hex((hi << 8) | lo, 4) + ' {ABS}';
             } else if (addrmode === 'ABX') {
-                lo = this.bus.read(addr, true); addr++;
-                hi = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
+                hi = this.bus.cpuRead(addr, true); addr++;
                 sInst += '$' + hex((hi << 8) | lo, 4) + ', X {ABX}';
             } else if (addrmode === 'ABY') {
-                lo = this.bus.read(addr, true); addr++;
-                hi = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
+                hi = this.bus.cpuRead(addr, true); addr++;
                 sInst += '$' + hex((hi << 8) | lo, 4) + ', Y {ABY}';
             } else if (addrmode === 'IND') {
-                lo = this.bus.read(addr, true); addr++;
-                hi = this.bus.read(addr, true); addr++;
+                lo = this.bus.cpuRead(addr, true); addr++;
+                hi = this.bus.cpuRead(addr, true); addr++;
                 sInst += '($' + hex((hi << 8) | lo, 4) + ') {IND}';
             } else if (addrmode === 'REL') {
-                value = this.bus.read(addr, true); addr++;
+                value = this.bus.cpuRead(addr, true); addr++;
                 sInst += '$' + hex(value, 2) + ' [$' + hex(addr + value, 4) + '] {REL}';
             }
 
