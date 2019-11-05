@@ -38,8 +38,8 @@ canvas {
   margin-right: 24px;
 }
 
-.codeArea, .ramArea {
-  margin-top: 24px;
+.codeArea, .ramArea, .instructions {
+  margin-top: 12px;
 }
 
 .active {

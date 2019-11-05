@@ -1,46 +1,52 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import Bus from './nes/bus';
 import Ram from './components/Ram';
 import Cpu from './components/Cpu';
 import Code from './components/Code';
+import Cartridge from './nes/cartridge';
 
 const nes = new Bus();
-// Load temp program
-const program = "A2 0A 8E 00 00 A2 03 8E 01 00 AC 00 00 A9 00 18 6D 01 00 88 D0 FA 8D 02 00 EA EA EA";
-let nOffset = 0x8000;
-
-for (let hex of program.split(' ')) {
-    nes.ram[nOffset] = parseInt(hex, 16);
-    nOffset++;
-}
-
-// Set Reset Vector
-nes.ram[0xFFFC] = 0x00;
-nes.ram[0xFFFD] = 0x80;
-
-// Reset
-nes.cpu.reset();
+let bEmulationRun = false;
+//let fResidualTime = 0.0;
 
 const App = () => {
-
+    // const [rom, setRom] = useState(null);
     const [cpu, setCpu] = useState(nes.cpu);
+    const [disassembly, setDisassembly] = useState([]);
+    const canvasRef = useRef(null);
 
     const handleUserKeyPress = useCallback(event => {
         const { code } = event;
         switch (code) {
             case 'Space':
-                do {
-                    nes.cpu.clock();
-                }
-                while (!nes.cpu.complete());
+                //do { nes.clock(); } while (!nes.cpu.complete());
+                bEmulationRun = !bEmulationRun;
                 break;
-            case "KeyR":
+            case 'KeyC':
+                // Clock enough times to execute a whole CPU instruction
+                do { nes.clock(); } while (!nes.cpu.complete());
+                // CPU clock runs slower than system clock, so it may be
+                // complete for additional system clock cycles. Drain
+                // those out
+                //do { nes.clock(); } while (nes.cpu.complete());
+                updateCanvas();
+                break;
+            case 'KeyF':
+                // Clock enough times to draw a single frame
+                do { nes.clock(); } while (!nes.ppu.frame_complete);
+                // Use residual clock cycles to complete current instruction
+                do { nes.clock(); } while (!nes.cpu.complete());
+                // Reset frame completion flag
+                nes.ppu.frame_complete = false;
+                updateCanvas();
+                break;
+            case 'KeyR':
                 nes.cpu.reset();
                 break;
-            case "KeyI":
+            case 'KeyI':
                 nes.cpu.irq();
                 break;
-            case "KeyN":
+            case 'KeyN':
                 nes.cpu.nmi();
                 break;
             default:
@@ -53,31 +59,98 @@ const App = () => {
     useEffect(() => {
         window.addEventListener('keydown', handleUserKeyPress);
 
+        async function getRom() {
+            const response = await fetch('/roms/nestest.nes');
+
+            if (response.ok) {
+                const data = await response.arrayBuffer();
+                // setRom(data);
+                nes.insertCartridge(new Cartridge(data));
+                //console.log('rom loaded');
+                // Extract dissassembly
+                const mapAsm = nes.cpu.disassemble(0x0000, 0xFFFF);
+                setDisassembly(mapAsm);
+
+                // Reset
+                nes.reset();
+                //console.log('reset done');
+                const cpuState = { ...nes.cpu };
+                setCpu(cpuState);
+
+            }
+        }
+
+        getRom();
+
         return () => {
             window.removeEventListener('keydown', handleUserKeyPress);
         };
     }, [handleUserKeyPress]);
 
-    // Extract dissassembly
-    const mapAsm = nes.cpu.disassemble(0x0000, 0xFFFF);
+    useEffect(() => {
+        function tick() {
+            if (bEmulationRun) {
+                do { nes.clock(); } while (!nes.ppu.frame_complete);
+                nes.ppu.frame_complete = false;
+                updateCanvas();
+                const cpuState = { ...nes.cpu };
+                setCpu(cpuState);
+            }
+        }
 
-    return nes ? (
+        const id = setInterval(tick, 1000 / 60); // NTSC 60Hz
+        return () => clearInterval(id);
+    }, []); // This effect never re-runs
+
+    function updateCanvas() {
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        var canvasData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const screen = nes.ppu.getScreen();
+        for (let x = 0; x < screen.width; x++) {
+            for (let y = 0; y < screen.height; y++) {
+                let pixel = screen.getPixel(x, y);
+                let index = (x * 4 + (y * screen.width)* 4);
+                if (x === 128) {
+                    canvasData.data[index + 0] = 218;
+                    canvasData.data[index + 1] = 168;
+                    canvasData.data[index + 2] = 32;
+                    canvasData.data[index + 3] = 255;
+                } else if (y === 120) {
+                    canvasData.data[index + 0] = 255;
+                    canvasData.data[index + 1] = 0;
+                    canvasData.data[index + 2] = 0;
+                    canvasData.data[index + 3] = 0;
+                } else {
+                    canvasData.data[index + 0] = pixel.r;
+                    canvasData.data[index + 1] = pixel.g;
+                    canvasData.data[index + 2] = pixel.b;
+                    canvasData.data[index + 3] = 255;
+                }
+            }
+        }
+        context.putImageData(canvasData, 0, 0);
+    }
+
+    return (
         <div className="gameArea">
             <h1>NES Emulator</h1>
-            <div className="container">
-                <div className="column">
-                    <canvas id="emulationCanvas" width="256" height="240" />
-                    <code className="instructions">SPACE = Step Instruction    R = RESET    I = IRQ    N = NMI</code>
-                    <Ram nes={nes} x={2} y={2} nAddr={0x0000} nRows={16} nColumns={16} />
-                    <Ram nes={nes} x={2} y={182} nAddr={0x8000} nRows={16} nColumns={16} />
+            {nes.cartridge ?
+                <div className="container">
+                    <div className="column">
+                        <canvas id="emulationCanvas" ref={canvasRef} width="256" height="240" />
+                        <code className="instructions">SPACE = Step Instruction    R = RESET    I = IRQ    N = NMI</code>
+                        <Ram nes={nes} x={2} y={2} nAddr={0x0000} nRows={16} nColumns={16} />
+                        <Ram nes={nes} x={2} y={182} nAddr={0x8000} nRows={16} nColumns={16} />
+                    </div>
+                    <div>
+                        <Cpu cpu={cpu} />
+                        <Code pc={cpu.pc} mapAsm={disassembly} x={512} y={72} nLines={26} />
+                    </div>
                 </div>
-                <div>
-                    <Cpu cpu={cpu} />
-                    <Code pc={cpu.pc} mapAsm={mapAsm} x={448} y={72} nLines={26} />
-                </div>
-            </div>
+                : <div>Loading</div>}
         </div>
-    ) : <div>Loading</div>
+    )
 }
 
 export default App;
