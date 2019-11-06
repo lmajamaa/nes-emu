@@ -4,6 +4,8 @@ import Ram from './components/Ram';
 import Cpu from './components/Cpu';
 import Code from './components/Code';
 import Cartridge from './nes/cartridge';
+import PatternTable from './components/PatternTable';
+import Palette from './components/Palette';
 
 const nes = new Bus();
 let bEmulationRun = false;
@@ -13,6 +15,7 @@ const App = () => {
     // const [rom, setRom] = useState(null);
     const [cpu, setCpu] = useState(nes.cpu);
     const [disassembly, setDisassembly] = useState([]);
+    const [selectedPalette, setSelectedPalette] = useState(0x00);
     const canvasRef = useRef(null);
 
     const handleUserKeyPress = useCallback(event => {
@@ -28,7 +31,7 @@ const App = () => {
                 // CPU clock runs slower than system clock, so it may be
                 // complete for additional system clock cycles. Drain
                 // those out
-                //do { nes.clock(); } while (nes.cpu.complete());
+                do { nes.clock(); } while (!nes.cpu.complete());
                 updateCanvas();
                 break;
             case 'KeyF':
@@ -39,6 +42,9 @@ const App = () => {
                 // Reset frame completion flag
                 nes.ppu.frame_complete = false;
                 updateCanvas();
+                break;
+            case 'KeyP':
+                setSelectedPalette(s => (s + 1) & 0x07);
                 break;
             case 'KeyR':
                 nes.cpu.reset();
@@ -107,30 +113,41 @@ const App = () => {
         const context = canvas.getContext('2d');
         var canvasData = context.getImageData(0, 0, canvas.width, canvas.height);
         const screen = nes.ppu.getScreen();
+       
         for (let x = 0; x < screen.width; x++) {
             for (let y = 0; y < screen.height; y++) {
-                let pixel = screen.getPixel(x, y);
-                let index = (x * 4 + (y * screen.width)* 4);
-                if (x === 128) {
-                    canvasData.data[index + 0] = 218;
-                    canvasData.data[index + 1] = 168;
-                    canvasData.data[index + 2] = 32;
-                    canvasData.data[index + 3] = 255;
-                } else if (y === 120) {
-                    canvasData.data[index + 0] = 255;
-                    canvasData.data[index + 1] = 0;
-                    canvasData.data[index + 2] = 0;
-                    canvasData.data[index + 3] = 0;
-                } else {
-                    canvasData.data[index + 0] = pixel.r;
-                    canvasData.data[index + 1] = pixel.g;
-                    canvasData.data[index + 2] = pixel.b;
-                    canvasData.data[index + 3] = 255;
-                }
+                let pixel = undefined;
+                try {
+                pixel = screen.getPixel(x, y);
+                let index = (x * 4 + (y * screen.width) * 4);
+                canvasData.data[index + 0] = pixel.r;
+                canvasData.data[index + 1] = pixel.g;
+                canvasData.data[index + 2] = pixel.b;
+                canvasData.data[index + 3] = 255;
+            } catch(e) {
+                console.log('Failed to update screen', screen,x, y, pixel);
+                break;
+            }
             }
         }
+        
         context.putImageData(canvasData, 0, 0);
     }
+
+    const palettes = [];
+    if (nes.cartridge) {
+        for (let p = 0; p < 8; p++) {
+            const palette = [];
+            for (let s = 0; s < 4; s++) {
+                let pixel = nes.ppu.getColorFromPaletteRam(p, s);
+                palette.push(`rgb(${pixel.r}, ${pixel.g}, ${pixel.b})`);
+            }
+            palettes.push(palette);
+        }
+    }
+
+    const patternTable0 = nes.cartridge ? nes.ppu.getPatternTable(0, selectedPalette) : null;
+    const patternTable1 = nes.cartridge ? nes.ppu.getPatternTable(0, selectedPalette) : null;
 
     return (
         <div className="gameArea">
@@ -143,9 +160,16 @@ const App = () => {
                         <Ram nes={nes} x={2} y={2} nAddr={0x0000} nRows={16} nColumns={16} />
                         <Ram nes={nes} x={2} y={182} nAddr={0x8000} nRows={16} nColumns={16} />
                     </div>
-                    <div>
+                    <div className="column">
                         <Cpu cpu={cpu} />
                         <Code pc={cpu.pc} mapAsm={disassembly} x={512} y={72} nLines={26} />
+                        <div>
+                            {palettes.map((palette, index) => <Palette key={index} size={10} data={palette} selected={selectedPalette === index} />)}
+                        </div>
+                        <div>
+                            <PatternTable patternTable={patternTable0} />
+                            <PatternTable patternTable={patternTable1} />
+                        </div>
                     </div>
                 </div>
                 : <div>Loading</div>}

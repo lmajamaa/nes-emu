@@ -11,7 +11,7 @@ export class Sprite {
         this.width = width;
         this.height = height;
 
-        this.content = new Array(width + 1).fill(Array(height + 1)).fill(new Pixel(0, 0, 0));
+        this.content = new Array(width + 1).fill(Array(height + 1).fill(new Pixel(0, 0, 0)));
     }
 
     getPixel(x, y) {

@@ -23,8 +23,8 @@ code {
   flex-direction: column;
 }
 
-canvas {
-  border:1px solid #555753;
+#emulationCanvas {
+  border:1px solid goldenrod;
   width: 640px;
   height: 480px;
 }
@@ -58,4 +58,15 @@ canvas {
 
 h4 {
   margin-top: 0;
+}
+
+.palette {
+  margin-top: 12px;
+  margin-left: 24px;
+}
+
+#patternCanvas {
+  border: 1px solid goldenrod;
+  margin-top: 12px;
+  margin-left: 24px;
 }

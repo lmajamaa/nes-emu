@@ -1,5 +1,5 @@
 import { instructions } from './instructions';
-import { hex } from '../utilities';
+import { hex, convertUint8ToInt } from '../utilities';
 
 // MOS 6502 CPU Implementation -  Thanks for https://github.com/OneLoneCoder/olcNES and https://github.com/fredericcambon/nes
 
@@ -44,6 +44,9 @@ class Cpu {
                     this.cycles = 1;
                     throw new Error('Cycles not defined for opcode', this.opcode)
                 }
+                if (instruction.opcode === 'XXX') {
+                    console.log(instruction);
+                }
                 //console.log(instruction.opcode, instruction.addrmode);
                 const additional_cycle1 = this[instruction.addrmode]();
                 const additional_cycle2 = this[instruction.opcode]();
@@ -53,9 +56,8 @@ class Cpu {
                 console.log('Unable to execute opcode: ' + this.opcode, e);
             }
         }
-        
-        if (this.cycles !== 0)
-            this.cycles--;
+
+        if(this.cycles !== 0) this.cycles--;
     }
 
     reset() {
@@ -136,8 +138,7 @@ class Cpu {
     }
 
     getFlags() {
-        // Concatenate the values of the flags in an int
-        var flags = 0;
+        let flags = 0;
 
         flags = flags | (this.c << 0);
         flags = flags | (this.z << 1);
@@ -173,32 +174,43 @@ class Cpu {
     }
 
     // Addressing modes
+    /** Address Mode: Implied */
     IMP() {
         this.fetched = this.a;
         return 0;
     }
+
+    /** Address Mode: Immediate */
     IMM() {
         this.addr_abs = this.pc++;
         return 0;
     }
+
+    /** Address Mode: Zero Page */
     ZP0() {
         this.addr_abs = this.read(this.pc);
         this.pc++;
         this.addr_abs &= 0x00FF;
         return 0;
     }
+
+    /** Address Mode: Zero Page with X Offset */
     ZPX() {
         this.addr_abs = this.read(this.pc) + this.x;
         this.pc++;
         this.addr_abs &= 0x00FF;
         return 0;
     }
+
+    /** Address Mode: Zero Page with Y Offset */
     ZPY() {
         this.addr_abs = this.read(this.pc) + this.y;
         this.pc++;
         this.addr_abs &= 0x00FF;
         return 0;
     }
+
+    /** Address Mode: Absolute  */
     ABS() {
         const lo = this.read(this.pc);
         this.pc++;
@@ -208,6 +220,8 @@ class Cpu {
         this.addr_abs = (hi << 8) | lo;
         return 0;
     }
+
+    /** Address Mode: Absolute with X Offset */
     ABX() {
         const lo = this.read(this.pc);
         this.pc++;
@@ -222,6 +236,8 @@ class Cpu {
         else
             return 0;
     }
+
+    /** Address Mode: Absolute with Y Offset */
     ABY() {
         const lo = this.read(this.pc);
         this.pc++;
@@ -236,6 +252,8 @@ class Cpu {
         else
             return 0;
     }
+
+    /** Address Mode: Indirect */
     IND() {
         const ptr_lo = this.read(this.pc);
         this.pc++;
@@ -252,6 +270,8 @@ class Cpu {
 
         return 0;
     }
+
+    /** Address Mode: Indirect X */
     IZX() {
         const t = this.read(this.pc);
         this.pc++;
@@ -262,6 +282,8 @@ class Cpu {
         this.addr_abs = (hi << 8) | lo;
         return 0;
     }
+
+    /** Address Mode: Indirect Y */
     IZY() {
         const t = this.read(this.pc);
         this.pc++;
@@ -277,6 +299,8 @@ class Cpu {
         else
             return 0;
     }
+
+    /**  Address Mode: Relative */
     REL() {
         this.addr_rel = this.read(this.pc);
         this.pc++;
@@ -876,7 +900,7 @@ class Cpu {
                 sInst += '($' + hex((hi << 8) | lo, 4) + ') {IND}';
             } else if (addrmode === 'REL') {
                 value = this.bus.cpuRead(addr, true); addr++;
-                sInst += '$' + hex(value, 2) + ' [$' + hex(addr + value, 4) + '] {REL}';
+                sInst += '$' + hex(value, 2) + ' [$' + hex(addr + convertUint8ToInt(value), 4) + '] {REL}';
             }
 
             mapLines[line_addr] = sInst;

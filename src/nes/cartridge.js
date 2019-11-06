@@ -1,5 +1,6 @@
 import iNESHeader from './iNESHeader';
 import Mapper_000 from './mappers/mapper_000';
+import { MIRROR } from './constants';
 
 const headerSize = 16;
 const prgBankSize = 16384;
@@ -20,6 +21,7 @@ class Cartridge {
 
         // Determine mapper ID
         const nMapperID = ((header.mapper2 >> 4) << 4) | (header.mapper1 >> 4);
+        this.mirror = (header.mapper1 & 0x01) ? MIRROR.VERTICAL : MIRROR.HORIZONTAL;
 
         // Discover file format
         const nFileType = 1;

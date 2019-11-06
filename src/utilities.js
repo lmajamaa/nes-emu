@@ -8,3 +8,7 @@ export function hex(number, length) {
 export function binary(number, length) {
     return number.toString(2).padStart(length, 0);
 }
+
+export function convertUint8ToInt(value) {
+    return value & 0x07 ? value - 256 : value;
+}
