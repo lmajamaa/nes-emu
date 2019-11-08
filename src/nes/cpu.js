@@ -61,47 +61,60 @@ class Cpu {
     }
 
     reset() {
+        console.log('reset');
+       
+        // Get address to set program counter to
+        this.addr_abs = 0xFFFC;
+        const lo = this.read(this.addr_abs + 0);
+        const hi = this.read(this.addr_abs + 1);
+
+        // Set it
+        this.pc = (hi << 8) | lo;
+
+        // Reset internal registers
         this.a = 0;
         this.x = 0;
         this.y = 0;
         this.stkp = 0xFD;
         this.setFlags(0x00 | Flags6502.U);
 
-        this.addr_abs = 0xFFFC;
-
-        const lo = this.read(this.addr_abs + 0);
-        const hi = this.read(this.addr_abs + 1);
-        this.pc = (hi << 8) | lo;
+        // Clear internal helper variables
         this.addr_rel = 0x0000;
         this.addr_abs = 0x0000;
         this.fetched = 0x00;
 
+        // Reset takes time
         this.cycles = 8;
     }
 
     irq() {
+        console.log('irq');
         if (this.i === 0) {
             this.write(0x0100 + this.stkp, (this.pc >> 8) & 0x00FF);
             this.stkp--;
             this.write(0x0100 + this.stkp, this.pc & 0x00FF);
             this.stkp--;
 
+            // Then push the status register to the stack
             this.b = 0;
             this.u = 1;
             this.i = 1;
             this.write(0x0100 + this.stkp, this.getFlags());
             this.stkp--;
 
+            // Read new program counter location from fixed address
             this.addr_abs = 0xFFFE;
             const lo = this.read(this.addr_abs + 0);
             const hi = this.read(this.addr_abs + 1);
             this.pc = (hi << 8) | lo;
 
+            // IRQs take time
             this.cycles = 7;
         }
     }
 
     nmi() {
+        console.log('nmi');
         this.write(0x0100 + this.stkp, (this.pc >> 8) & 0x00FF);
         this.stkp--;
         this.write(0x0100 + this.stkp, this.pc & 0x00FF);
@@ -118,6 +131,7 @@ class Cpu {
         const hi = this.read(this.addr_abs + 1);
         this.pc = (hi << 8) | lo;
 
+        // NMIs take time
         this.cycles = 8;
     }
 
@@ -134,6 +148,9 @@ class Cpu {
     }
 
     write(addr, data) {
+        if(addr === 0x2000) {
+            console.log('writing to control: ', hex(data, 4));
+        }
         this.bus.cpuWrite(addr, data);
     }
 
@@ -527,14 +544,14 @@ class Cpu {
     }
     /** Decrement X Register */
     DEX() {
-        this.x--;
+        this.x = (this.x - 1) & 0xFF;
         this.z = this.x === 0 ? 1 : 0;
         this.n = (this.x & 0x80) !== 0 ? 1 : 0;
         return 0;
     }
     /** Decrement Y Register */
     DEY() {
-        this.y--;
+        this.y = (this.y - 1) & 0xFF;
         this.z = this.y === 0 ? 1 : 0;
         this.n = (this.y & 0x80) !== 0 ? 1 : 0;
         return 0;
@@ -578,6 +595,7 @@ class Cpu {
     }
     /** Instruction: Jump To Sub-Routine */
     JSR() {
+        console.log('JSR', hex(this.pc, 4));
         this.pc--;
 
         this.write(0x0100 + this.stkp, (this.pc >> 8) & 0x00FF);
@@ -586,6 +604,7 @@ class Cpu {
         this.stkp--;
 
         this.pc = this.addr_abs;
+        console.log('JSR', hex(this.pc, 4));
         return 0;
     }
     /** Instruction: Load The Accumulator */
