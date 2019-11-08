@@ -12,7 +12,7 @@ let bEmulationRun = false;
 //let fResidualTime = 0.0;
 
 const App = () => {
-    // const [rom, setRom] = useState(null);
+    const [rom, setRom] = useState('nestest.nes');
     const [cpu, setCpu] = useState(nes.cpu);
     const [disassembly, setDisassembly] = useState([]);
     const [selectedPalette, setSelectedPalette] = useState(0x00);
@@ -66,7 +66,7 @@ const App = () => {
         window.addEventListener('keydown', handleUserKeyPress);
 
         async function getRom() {
-            const response = await fetch('/roms/nestest.nes');
+            const response = await fetch('/roms/' + rom);
 
             if (response.ok) {
                 const data = await response.arrayBuffer();
@@ -91,7 +91,7 @@ const App = () => {
         return () => {
             window.removeEventListener('keydown', handleUserKeyPress);
         };
-    }, [handleUserKeyPress]);
+    }, [handleUserKeyPress, rom]);
 
     useEffect(() => {
         function tick() {
@@ -151,7 +151,7 @@ const App = () => {
 
     return (
         <div className="gameArea">
-            <h1>NES Emulator</h1>
+            <h1>NES Emulator - {rom}</h1>
             {nes.cartridge ?
                 <div className="container">
                     <div className="column">
