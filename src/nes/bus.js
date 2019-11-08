@@ -18,7 +18,9 @@ class Bus {
     }
 
     reset() {
+        this.cartridge.reset();
         this.cpu.reset();
+        this.ppu.reset();
         this.nSystemClockCounter = 0;
     }
 

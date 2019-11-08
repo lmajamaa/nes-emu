@@ -1,6 +1,6 @@
 import Mapper from './mapper';
 
-class Mapper_000 extends Mapper { 
+class Mapper_000 extends Mapper {
     cpuMapRead(addr, object) {
         if (addr >= 0x8000 & addr <= 0xFFFF) {
             object.mapped_addr = addr & (this._nPRGBanks > 1 ? 0x7FFF : 0x3FFF);
@@ -35,6 +35,10 @@ class Mapper_000 extends Mapper {
             }
         }
         return false;
+    }
+
+    reset() {
+
     }
 }
 

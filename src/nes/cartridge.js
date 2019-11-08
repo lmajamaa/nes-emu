@@ -52,26 +52,28 @@ class Cartridge {
                 break;
             default:
                 console.log('Mapper not implemented yet', nMapperID);
+                this.pMapper = new Mapper_000(this.nPRGBanks, this.nCHRBanks); // Fallback
                 break;
         }
     }
+
     // Communication with main bus
     cpuRead(addr, object) {
         let mapped_addr = 0;
         let mapper_obj = { mapped_addr };
-        if(this.pMapper.cpuMapRead(addr, mapper_obj)) {
+        if (this.pMapper.cpuMapRead(addr, mapper_obj)) {
             mapped_addr = mapper_obj.mapped_addr;
             object.data = this.vPRGMemory[mapped_addr];
             return true;
         } else {
             return false;
         }
-        
     }
+
     cpuWrite(addr, data) {
         let mapped_addr = 0;
         let mapper_obj = { mapped_addr };
-        if(this.pMapper.cpuMapWrite(addr, mapper_obj)) {
+        if (this.pMapper.cpuMapWrite(addr, mapper_obj)) {
             mapped_addr = mapper_obj.mapped_addr;
             this.vPRGMemory[mapped_addr] = data;
             return true;
@@ -79,11 +81,12 @@ class Cartridge {
             return false;
         }
     }
+
     // Communication with PPU bus
     ppuRead(addr, data) {
         let mapped_addr = 0;
         let mapper_obj = { mapped_addr };
-        if(this.pMapper.ppuMapWrite(addr, mapper_obj)) {
+        if (this.pMapper.ppuMapWrite(addr, mapper_obj)) {
             mapped_addr = mapper_obj.mapped_addr;
             data = this.vCHRMemory[mapped_addr];
             return true;
@@ -91,15 +94,22 @@ class Cartridge {
             return false;
         }
     }
+
     ppuWrite(addr, data) {
         let mapped_addr = 0;
         let mapper_obj = { mapped_addr };
-        if(this.pMapper.ppuMapWrite(addr, mapper_obj)) {
+        if (this.pMapper.ppuMapWrite(addr, mapper_obj)) {
             mapped_addr = mapper_obj.mapped_addr;
             this.vCHRMemory[mapped_addr] = data;
             return true;
         } else {
             return false;
+        }
+    }
+
+    reset() {
+        if (this.pMapper) {
+            this.pMapper.reset();
         }
     }
 }
