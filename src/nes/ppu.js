@@ -4,6 +4,7 @@ import { MIRROR } from "./constants";
 import StatusRegister from "./registers/statusRegister";
 import ControlRegister from "./registers/controlRegister";
 import MaskRegister from "./registers/maskRegister";
+import { hex } from "../utilities";
 
 class Ppu {
     constructor() {
@@ -121,12 +122,10 @@ class Ppu {
 
     clock() {
 
-
-
         if (this.scanline >= -1 && this.scanline < 240) {
 
             if (this.scanline === -1 && this.cycle === 1) {
-                this.vertical_blank = 0;
+                this.status.vertical_blank = 0;
             }
 
             if ((this.cycle >= 2 && this.cycle < 258) || (this.cycle >= 321 && this.cycle < 338)) {
@@ -183,9 +182,10 @@ class Ppu {
         }
 
         if (this.scanline === 241 && this.cycle === 1) {
-            this.vertical_blank = 1;
-            if (this.enable_nmi) {
+            this.status.vertical_blank = 1;
+            if (this.control.enable_nmi === 1) {
                 this.nmi = true;
+                console.log('ppu nmi', this.nmi);
             }
         }
 
@@ -273,6 +273,7 @@ class Ppu {
     cpuWrite(addr, data) {
         switch (addr) {
             case 0x0000: // Control
+                console.log('writing to control: ', hex(data, 4));
                 this.control.reg = data;
                 break;
             case 0x0001: // Mask
@@ -409,6 +410,27 @@ class Ppu {
             //console.log('writing to palette', hex(addr,4), hex(data, 2));
             this.tblPalette[addr] = data;
         }
+    }
+
+    reset() {
+        this.fine_x = 0x00;
+        this.address_latch = 0x00;
+        this.ppu_data_buffer = 0x00;
+        this.scanline = 0;
+        this.cycle = 0;
+        this.bg_next_tile_id = 0x00;
+        this.bg_next_tile_attrib = 0x00;
+        this.bg_next_tile_lsb = 0x00;
+        this.bg_next_tile_msb = 0x00;
+        this.bg_shifter_pattern_lo = 0x0000;
+        this.bg_shifter_pattern_hi = 0x0000;
+        this.bg_shifter_attrib_lo = 0x0000;
+        this.bg_shifter_attrib_hi = 0x0000;
+        this.status.reg = 0x00;
+        this.mask.reg = 0x00;
+        this.control.reg = 0x00;
+        this.vram_addr.reg = 0x0000;
+        this.tram_addr.reg = 0x0000;
     }
 
     // Debugging utilities
