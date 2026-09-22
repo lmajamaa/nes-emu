@@ -26,8 +26,9 @@ abstract class Mapper {
         return null;
     }
 
-    // Called by the PPU once per rendered scanline, for mappers that count them
-    scanline(): void {}
+    // Called with every address the PPU puts on its bus, for mappers that watch it.
+    // The time is in PPU cycles.
+    ppuAddress(_addr: number, _time: number): void {}
 
     get irq(): boolean {
         return false;

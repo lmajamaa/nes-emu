@@ -3,6 +3,8 @@ import { MIRROR, type Mirror } from '../constants';
 
 const PRG_BANK_SIZE = 0x2000;
 const CHR_BANK_SIZE = 0x0400;
+// About 3 CPU cycles
+const A12_FILTER_CYCLES = 10;
 
 // MMC3, see https://www.nesdev.org/wiki/MMC3
 class Mapper_004 extends Mapper {
@@ -16,6 +18,8 @@ class Mapper_004 extends Mapper {
     private irqReload = false;
     private irqEnabled = false;
     private irqPending = false;
+    private a12High = false;
+    private a12FellAt = 0;
 
     private get prgBanks(): number {
         return this._nPRGBanks * 2;
@@ -107,7 +111,19 @@ class Mapper_004 extends Mapper {
         return this.horizontalMirroring ? MIRROR.HORIZONTAL : MIRROR.VERTICAL;
     }
 
-    scanline(): void {
+    // The counter is clocked by rising edges of PPU address line A12, but only after A12 has
+    // been low for a while. That filters out the quick toggling between sprite tile fetches,
+    // so it's normally clocked once per scanline.
+    ppuAddress(addr: number, time: number): void {
+        const high = (addr & 0x1000) !== 0;
+        if (high && !this.a12High && time - this.a12FellAt >= A12_FILTER_CYCLES) {
+            this.clockCounter();
+        }
+        if (!high && this.a12High) this.a12FellAt = time;
+        this.a12High = high;
+    }
+
+    private clockCounter(): void {
         if (this.irqCounter === 0 || this.irqReload) {
             this.irqCounter = this.irqLatch;
             this.irqReload = false;
@@ -130,6 +146,8 @@ class Mapper_004 extends Mapper {
         this.irqReload = false;
         this.irqEnabled = false;
         this.irqPending = false;
+        this.a12High = false;
+        this.a12FellAt = 0;
     }
 }
 

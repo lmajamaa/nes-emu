@@ -63,6 +63,9 @@ class Ppu {
     private bSpriteZeroHitPossible = false;
     private bSpriteZeroBeingRendered = false;
 
+    // Total PPU cycles, used as the time for the mapper watching the address bus
+    private cycleCount = 0;
+
     connectCartridge(cartridge: Cartridge): void {
         this.cartridge = cartridge;
         this.tblName = [Array(1024).fill(0x00), Array(1024).fill(0x00)];
@@ -177,39 +180,56 @@ class Ppu {
         }
     }
 
-    LoadSpriteShifters(): void {
-        this.spriteScanline.forEach((sprite, i) => {
-            const flipVertical = (sprite.attribute & 0x80) !== 0;
-            const flipHorizontal = (sprite.attribute & 0x40) !== 0;
-            const row = this.scanline - sprite.y;
+    private spritePatternAddress(slot: number): number {
+        const sprite = this.spriteScanline[slot];
+        // Empty slots still fetch tile $FF, which matters to mappers watching the address bus
+        if (!sprite) return this.control.sprite_mode ? 0x1FF0 : (this.control.pattern_sprite << 12) | 0x0FF0;
 
-            let addr: number;
-            if (!this.control.sprite_mode) {
-                // 8x8 sprites use the pattern table selected in the control register
-                addr = (this.control.pattern_sprite << 12)
-                    | (sprite.id << 4)
-                    | (flipVertical ? 7 - row : row);
-            } else {
-                // 8x16 sprites: bit 0 of the id selects the pattern table, and a
-                // vertical flip also swaps the top and bottom tiles
-                const flippedRow = flipVertical ? 15 - row : row;
-                addr = ((sprite.id & 0x01) << 12)
-                    | (((sprite.id & 0xFE) + (flippedRow < 8 ? 0 : 1)) << 4)
-                    | (flippedRow & 0x07);
-            }
+        const flipVertical = (sprite.attribute & 0x80) !== 0;
+        const row = this.scanline - sprite.y;
+        if (!this.control.sprite_mode) {
+            // 8x8 sprites use the pattern table selected in the control register
+            return (this.control.pattern_sprite << 12)
+                | (sprite.id << 4)
+                | (flipVertical ? 7 - row : row);
+        }
+        // 8x16 sprites: bit 0 of the id selects the pattern table, and a
+        // vertical flip also swaps the top and bottom tiles
+        const flippedRow = flipVertical ? 15 - row : row;
+        return ((sprite.id & 0x01) << 12)
+            | (((sprite.id & 0xFE) + (flippedRow < 8 ? 0 : 1)) << 4)
+            | (flippedRow & 0x07);
+    }
 
-            let lo = this.ppuRead(addr);
-            let hi = this.ppuRead(addr + 8);
-            if (flipHorizontal) {
-                lo = flipByte(lo);
-                hi = flipByte(hi);
+    // Cycles 257-320 fetch the patterns of the next scanline's 8 sprites, 8 cycles each:
+    // two unused nametable reads, then the low and high pattern bytes
+    FetchSprites(): void {
+        const slot = (this.cycle - 257) >> 3;
+        switch ((this.cycle - 257) & 0x07) {
+            case 0:
+            case 2:
+                this.ppuRead(0x2000 | (this.vram_addr.reg & 0x0FFF));
+                break;
+            case 4:
+            case 6: {
+                const high = ((this.cycle - 257) & 0x07) === 6;
+                let data = this.ppuRead(this.spritePatternAddress(slot) + (high ? 8 : 0));
+                const sprite = this.spriteScanline[slot];
+                if (!sprite) data = 0;
+                else if (sprite.attribute & 0x40) data = flipByte(data);
+                if (high) {
+                    this.sprite_shifter_pattern_hi[slot] = data;
+                } else {
+                    this.sprite_shifter_pattern_lo[slot] = data;
+                }
+                break;
             }
-            this.sprite_shifter_pattern_lo[i] = lo;
-            this.sprite_shifter_pattern_hi[i] = hi;
-        });
+        }
     }
 
     clock(): void {
+        this.cycleCount++;
+        const rendering = this.mask.render_background || this.mask.render_sprites;
 
         if (this.scanline >= -1 && this.scanline < 240) {
 
@@ -231,7 +251,8 @@ class Ppu {
 
                 this.UpdateShifters();
 
-                switch ((this.cycle - 1) % 8) {
+                // Nothing is fetched while rendering is off
+                switch (rendering ? (this.cycle - 1) % 8 : -1) {
                     case 0:
                         this.LoadBackgroundShifters();
                         this.bg_next_tile_id = this.ppuRead(0x2000 | (this.vram_addr.reg & 0x0FFF));
@@ -281,14 +302,13 @@ class Ppu {
                 this.EvaluateSprites();
             }
 
-            if (this.cycle === 340 && this.scanline >= 0) {
-                this.LoadSpriteShifters();
+            if (rendering && this.cycle >= 257 && this.cycle <= 320) {
+                this.FetchSprites();
             }
 
-            // MMC3 counts rising edges of PPU address line A12, which happen around here when the
-            // background uses pattern table 0 and sprites table 1, the usual setup
-            if (this.cycle === 260 && (this.mask.render_background || this.mask.render_sprites)) {
-                this.cartridge?.scanline();
+            // Unused nametable fetch at the end of the scanline
+            if (rendering && this.cycle === 339) {
+                this.ppuRead(0x2000 | (this.vram_addr.reg & 0x0FFF));
             }
         }
 
@@ -426,7 +446,7 @@ class Ppu {
                 this.ppu_data_buffer = this.ppuRead(this.vram_addr.reg);
 
                 if (this.vram_addr.reg >= 0x3F00) data = this.ppu_data_buffer;
-                this.vram_addr.reg += (this.control.increment_mode ? 32 : 1);
+                this.incrementVramAddress();
                 break;
             default:
                 break;
@@ -472,17 +492,28 @@ class Ppu {
                 } else {
                     this.tram_addr.reg = (this.tram_addr.reg & 0xFF00) | data;
                     this.vram_addr.reg = this.tram_addr.reg;
+                    this.putAddressOnBus(this.vram_addr.reg);
                     this.address_latch = 0;
                 }
                 break;
             case 0x0007: // PPU data
                 this.ppuWrite(this.vram_addr.reg, data);
-                this.vram_addr.reg += (this.control.increment_mode ? 32 : 1);
+                this.incrementVramAddress();
                 break;
             default:
                 break;
         }
     }
+    // Outside of rendering the PPU address bus holds the VRAM address
+    private incrementVramAddress(): void {
+        this.vram_addr.reg += (this.control.increment_mode ? 32 : 1);
+        this.putAddressOnBus(this.vram_addr.reg);
+    }
+
+    private putAddressOnBus(addr: number): void {
+        this.cartridge?.ppuAddress(addr & 0x3FFF, this.cycleCount);
+    }
+
     // The PPU has room for two of the four nametables, the cartridge decides how they are mirrored
     private nametable(addr: number): number[] {
         const table = (addr >> 10) & 0x03;
@@ -495,9 +526,11 @@ class Ppu {
     }
 
     // Communication with PPU bus
-    ppuRead(addr: number, _readOnly = false): number {
+    // Read-only reads are for debugging, they don't appear on the bus
+    ppuRead(addr: number, readOnly = false): number {
         let data = 0x00;
         addr &= 0x3FFF;
+        if (!readOnly) this.putAddressOnBus(addr);
         const object = { data };
         if (!this.cartridge) {
             // Nothing to read without a cartridge
@@ -520,6 +553,7 @@ class Ppu {
     }
     ppuWrite(addr: number, data: number): void {
         addr &= 0x3FFF;
+        this.putAddressOnBus(addr);
 
         if (!this.cartridge) {
             // Nothing to write to without a cartridge
@@ -582,8 +616,8 @@ class Ppu {
 
                 for (let row = 0; row < 8; row++) {
 
-                    let tile_lsb = this.ppuRead(i * 0x1000 + nOffset + row + 0);
-                    let tile_msb = this.ppuRead(i * 0x1000 + nOffset + row + 8);
+                    let tile_lsb = this.ppuRead(i * 0x1000 + nOffset + row + 0, true);
+                    let tile_msb = this.ppuRead(i * 0x1000 + nOffset + row + 8, true);
                     for (let col = 0; col < 8; col++) {
                         const pixel = ((tile_msb & 0x01) << 1) | (tile_lsb & 0x01);
                         tile_lsb >>= 1; tile_msb >>= 1;
@@ -598,7 +632,7 @@ class Ppu {
     }
 
     getColorFromPaletteRam(palette: number, pixel: number): Pixel {
-        return palScreen[this.ppuRead(0x3F00 + (palette << 2) + pixel)];
+        return palScreen[this.ppuRead(0x3F00 + (palette << 2) + pixel, true)];
 
     }
 }

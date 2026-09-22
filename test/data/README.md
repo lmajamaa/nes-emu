@@ -35,6 +35,14 @@ and its failure codes. They report through PRG RAM: a status at `$6000` (`$80` r
 
 Source: https://github.com/christopherpow/nes-test-roms/tree/master/apu_test/rom_singles
 
+## `blargg-mmc3/`
+
+blargg's `mmc3_test_2` single ROMs and `readme.txt`, testing the MMC3 (mapper 4) scanline
+counter and IRQ. They report through `$6000` like the APU tests. `4-scanline_timing` and
+`6-MMC3_alt` are expected to fail, see `test/blargg-mmc3.test.ts`.
+
+Source: https://github.com/christopherpow/nes-test-roms/tree/master/mmc3_test_2
+
 ## `blargg-instr/`
 
 `official_only.nes` from blargg's `instr_test-v5`: 16 tests of every official instruction,

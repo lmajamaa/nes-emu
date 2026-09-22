@@ -130,8 +130,8 @@ class Cartridge {
         return this.pMapper.mirror() ?? this.hardwiredMirror;
     }
 
-    scanline(): void {
-        this.pMapper.scanline();
+    ppuAddress(addr: number, time: number): void {
+        this.pMapper.ppuAddress(addr, time);
     }
 
     get irq(): boolean {

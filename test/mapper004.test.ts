@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { beforeAll, describe, expect, test } from 'bun:test';
 import Bus from '../src/nes/bus';
 import Cartridge from '../src/nes/cartridge';
 import { MIRROR } from '../src/nes/constants';
@@ -91,9 +91,14 @@ describe('MMC3 mirroring', () => {
 });
 
 describe('MMC3 scanline IRQ', () => {
+    // PPU cycles, only needs to keep increasing
+    let time = 0;
+
+    // Raises PPU address line A12 after it has been low long enough to count
     function clockScanlines(bus: Bus, count: number): boolean[] {
         return Array.from({ length: count }, () => {
-            bus.cartridge!.scanline();
+            bus.cartridge!.ppuAddress(0x0000, time += 20);
+            bus.cartridge!.ppuAddress(0x1000, time += 20);
             return bus.cartridge!.irq;
         });
     }
@@ -126,19 +131,24 @@ describe('MMC3 scanline IRQ', () => {
         expect(clockScanlines(bus, 3)).toEqual([true, true, true]);
     });
 
-    test('the PPU clocks it once per rendered scanline, including the pre-render line', () => {
+    test('ignores A12 rising again soon after falling, like between sprite fetches', () => {
         const bus = createBus();
-        const scanline = spyOn(bus.cartridge!, 'scanline');
-        bus.ppu.cpuWrite(0x0001, 0x00);
-        runFrames(bus.ppu, 1);
-        expect(scanline).toHaveBeenCalledTimes(0);
+        bus.cpuWrite(IRQ_LATCH, 0);
+        bus.cpuWrite(IRQ_ENABLE, 0);
+        expect(clockScanlines(bus, 1)).toEqual([true]);
+        bus.cpuWrite(IRQ_DISABLE, 0);
+        bus.cpuWrite(IRQ_ENABLE, 0);
 
-        bus.ppu.cpuWrite(0x0001, 0x18);
-        runFrames(bus.ppu, 1);
-        expect(scanline).toHaveBeenCalledTimes(241);
+        bus.cartridge!.ppuAddress(0x0000, time += 4);
+        bus.cartridge!.ppuAddress(0x1000, time += 4);
+        expect(bus.cartridge!.irq).toBe(false);
     });
 
-    test('interrupts the CPU', () => {
+    // Rendering raises A12 once per scanline when the background and sprites use different pattern tables
+    test.each([
+        ['sprites', 0x08],
+        ['the background', 0x10],
+    ])('interrupts the CPU, with %s using pattern table 1', (_name, ppuCtrl) => {
         const bus = createBus(prg => {
             // The program lives in the last bank, which is fixed at $E000
             const last = (PRG_8K_BANKS - 1) * 0x2000;
@@ -149,10 +159,12 @@ describe('MMC3 scanline IRQ', () => {
                 0x8D, 0x00, 0xC0, // STA $C000: IRQ every 10 scanlines
                 0x8D, 0x01, 0xC0, // STA $C001
                 0x8D, 0x01, 0xE0, // STA $E001: enable
+                0xA9, ppuCtrl,    // LDA #ppuCtrl
+                0x8D, 0x00, 0x20, // STA $2000
                 0xA9, 0x18,       // LDA #$18
                 0x8D, 0x01, 0x20, // STA $2001: rendering on
                 0x58,             // CLI
-                0x4C, 0x16, 0xE0, // JMP $E016
+                0x4C, 0x1B, 0xE0, // JMP $E01B
             ], last);
             prg.set([
                 0xE6, 0x00,       // INC $00
