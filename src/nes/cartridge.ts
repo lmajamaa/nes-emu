@@ -2,6 +2,7 @@ import iNESHeader from './iNESHeader';
 import type Mapper from './mappers/mapper';
 import Mapper_000 from './mappers/mapper_000';
 import Mapper_001 from './mappers/mapper_001';
+import Mapper_004 from './mappers/mapper_004';
 import { MIRROR, type Mirror } from './constants';
 
 const headerSize = 16;
@@ -12,7 +13,7 @@ export interface ReadResult {
     data: number;
 }
 
-export const SUPPORTED_MAPPERS: readonly number[] = [0, 1];
+export const SUPPORTED_MAPPERS: readonly number[] = [0, 1, 4];
 
 class Cartridge {
     readonly mapperId: number;
@@ -74,6 +75,9 @@ class Cartridge {
             case 1:
                 this.pMapper = new Mapper_001(this.nPRGBanks, this.nCHRBanks);
                 break;
+            case 4:
+                this.pMapper = new Mapper_004(this.nPRGBanks, this.nCHRBanks);
+                break;
             default:
                 console.log('Mapper not implemented yet', nMapperID);
                 this.pMapper = new Mapper_000(this.nPRGBanks, this.nCHRBanks); // Fallback
@@ -124,6 +128,14 @@ class Cartridge {
 
     get mirror(): Mirror {
         return this.pMapper.mirror() ?? this.hardwiredMirror;
+    }
+
+    scanline(): void {
+        this.pMapper.scanline();
+    }
+
+    get irq(): boolean {
+        return this.pMapper.irq;
     }
 
     reset(): void {

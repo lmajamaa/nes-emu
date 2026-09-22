@@ -25,6 +25,13 @@ abstract class Mapper {
     mirror(): Mirror | null {
         return null;
     }
+
+    // Called by the PPU once per rendered scanline, for mappers that count them
+    scanline(): void {}
+
+    get irq(): boolean {
+        return false;
+    }
 }
 
 export default Mapper;

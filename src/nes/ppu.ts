@@ -284,6 +284,12 @@ class Ppu {
             if (this.cycle === 340 && this.scanline >= 0) {
                 this.LoadSpriteShifters();
             }
+
+            // MMC3 counts rising edges of PPU address line A12, which happen around here when the
+            // background uses pattern table 0 and sprites table 1, the usual setup
+            if (this.cycle === 260 && (this.mask.render_background || this.mask.render_sprites)) {
+                this.cartridge?.scanline();
+            }
         }
 
         if (this.scanline === 240) {

@@ -60,7 +60,8 @@ class Bus implements CpuBus {
                 this.clockDma();
             } else {
                 // IRQ is level triggered and only taken between instructions
-                if (this.apu.irq && this.cpu.complete()) this.cpu.irq();
+                const irq = this.apu.irq || (this.cartridge?.irq ?? false);
+                if (irq && this.cpu.complete()) this.cpu.irq();
                 this.cpu.clock();
             }
         }
