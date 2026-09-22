@@ -1,5 +1,7 @@
 import { spyOn } from 'bun:test';
+import Bus from '../src/nes/bus';
 import type Cpu from '../src/nes/cpu';
+import type Ppu from '../src/nes/ppu';
 import type { CpuBus } from '../src/nes/cpu';
 import { hex } from '../src/utils';
 
@@ -62,6 +64,27 @@ export function fmt(value: unknown, length = 2): string {
         return String(value);
     }
     return '$' + hex(value, length);
+}
+
+// Builds an iNES image with one 16KB PRG bank and one 8KB CHR bank, using mapper 0
+export function buildRom({ prg, chr }: { prg?: Uint8Array, chr?: Uint8Array } = {}): Uint8Array {
+    prg ??= new Uint8Array(0x4000);
+    chr ??= new Uint8Array(0x2000);
+    const header = [0x4E, 0x45, 0x53, 0x1A, prg.length / 0x4000, chr.length / 0x2000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    return Uint8Array.from([...header, ...prg, ...chr]);
+}
+
+// Clocks the whole system, or just the PPU
+export function runFrames(target: Bus | Ppu, frames: number): void {
+    const ppu = target instanceof Bus ? target.ppu : target;
+    for (let f = 0; f < frames; f++) {
+        do { target.clock(); } while (!ppu.frame_complete);
+        ppu.frame_complete = false;
+    }
+}
+
+export function clockUntil(ppu: Ppu, done: () => boolean): void {
+    do { ppu.clock(); } while (!done());
 }
 
 export function muteConsole(): void {

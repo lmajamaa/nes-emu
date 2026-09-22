@@ -6,6 +6,15 @@ import type Cartridge from "./cartridge";
 import ControlRegister from "./registers/controlRegister";
 import MaskRegister from "./registers/maskRegister";
 
+export interface ObjectAttributeEntry {
+    y: number;
+    id: number;
+    attribute: number;
+    x: number;
+}
+
+const MAX_SPRITES_PER_SCANLINE = 8;
+
 class Ppu {
     private cartridge: Cartridge | null = null;
 
@@ -43,6 +52,16 @@ class Ppu {
     bg_shifter_pattern_hi = 0x0000;
     bg_shifter_attrib_lo = 0x0000;
     bg_shifter_attrib_hi = 0x0000;
+
+    // 64 sprites of 4 bytes: y, id, attribute, x
+    readonly oam = new Uint8Array(256);
+    oam_addr = 0x00;
+
+    private spriteScanline: ObjectAttributeEntry[] = [];
+    private readonly sprite_shifter_pattern_lo = new Uint8Array(MAX_SPRITES_PER_SCANLINE);
+    private readonly sprite_shifter_pattern_hi = new Uint8Array(MAX_SPRITES_PER_SCANLINE);
+    private bSpriteZeroHitPossible = false;
+    private bSpriteZeroBeingRendered = false;
 
     connectCartridge(cartridge: Cartridge): void {
         this.cartridge = cartridge;
@@ -118,14 +137,94 @@ class Ppu {
             this.bg_shifter_attrib_lo <<= 1;
             this.bg_shifter_attrib_hi <<= 1;
         }
+
+        // Sprites count down their x position, and start shifting out once it reaches 0
+        if (this.mask.render_sprites && this.cycle >= 1 && this.cycle < 258) {
+            this.spriteScanline.forEach((sprite, i) => {
+                if (sprite.x > 0) {
+                    sprite.x--;
+                } else {
+                    this.sprite_shifter_pattern_lo[i] <<= 1;
+                    this.sprite_shifter_pattern_hi[i] <<= 1;
+                }
+            });
+        }
+    }
+
+    // Finds the sprites visible on the next scanline
+    EvaluateSprites(): void {
+        this.spriteScanline = [];
+        this.sprite_shifter_pattern_lo.fill(0);
+        this.sprite_shifter_pattern_hi.fill(0);
+        this.bSpriteZeroHitPossible = false;
+
+        const height = this.control.sprite_mode ? 16 : 8;
+        for (let n = 0; n < 64; n++) {
+            const diff = this.scanline - this.oam[n * 4];
+            if (diff >= 0 && diff < height) {
+                if (this.spriteScanline.length === MAX_SPRITES_PER_SCANLINE) {
+                    this.status.sprite_overflow = 1;
+                    break;
+                }
+                if (n === 0) this.bSpriteZeroHitPossible = true;
+                this.spriteScanline.push({
+                    y: this.oam[n * 4],
+                    id: this.oam[n * 4 + 1],
+                    attribute: this.oam[n * 4 + 2],
+                    x: this.oam[n * 4 + 3],
+                });
+            }
+        }
+    }
+
+    LoadSpriteShifters(): void {
+        this.spriteScanline.forEach((sprite, i) => {
+            const flipVertical = (sprite.attribute & 0x80) !== 0;
+            const flipHorizontal = (sprite.attribute & 0x40) !== 0;
+            const row = this.scanline - sprite.y;
+
+            let addr: number;
+            if (!this.control.sprite_mode) {
+                // 8x8 sprites use the pattern table selected in the control register
+                addr = (this.control.pattern_sprite << 12)
+                    | (sprite.id << 4)
+                    | (flipVertical ? 7 - row : row);
+            } else {
+                // 8x16 sprites: bit 0 of the id selects the pattern table, and a
+                // vertical flip also swaps the top and bottom tiles
+                const flippedRow = flipVertical ? 15 - row : row;
+                addr = ((sprite.id & 0x01) << 12)
+                    | (((sprite.id & 0xFE) + (flippedRow < 8 ? 0 : 1)) << 4)
+                    | (flippedRow & 0x07);
+            }
+
+            let lo = this.ppuRead(addr);
+            let hi = this.ppuRead(addr + 8);
+            if (flipHorizontal) {
+                lo = flipByte(lo);
+                hi = flipByte(hi);
+            }
+            this.sprite_shifter_pattern_lo[i] = lo;
+            this.sprite_shifter_pattern_hi[i] = hi;
+        });
     }
 
     clock(): void {
 
         if (this.scanline >= -1 && this.scanline < 240) {
 
+            if (this.scanline === 0 && this.cycle === 0) {
+                // "Odd frame" cycle skip
+                this.cycle = 1;
+            }
+
             if (this.scanline === -1 && this.cycle === 1) {
                 this.status.vertical_blank = 0;
+                this.status.sprite_overflow = 0;
+                this.status.sprite_zero_hit = 0;
+                this.spriteScanline = [];
+                this.sprite_shifter_pattern_lo.fill(0);
+                this.sprite_shifter_pattern_hi.fill(0);
             }
 
             if ((this.cycle >= 2 && this.cycle < 258) || (this.cycle >= 321 && this.cycle < 338)) {
@@ -169,11 +268,21 @@ class Ppu {
             }
 
             if (this.cycle === 257) {
+                this.LoadBackgroundShifters();
                 this.TransferAddressX();
             }
 
             if (this.scanline === -1 && this.cycle >= 280 && this.cycle < 305) {
                 this.TransferAddressY();
+            }
+
+            // Sprites are never drawn on scanline 0, as nothing is evaluated on the pre-render line
+            if (this.cycle === 257 && this.scanline >= 0) {
+                this.EvaluateSprites();
+            }
+
+            if (this.cycle === 340 && this.scanline >= 0) {
+                this.LoadSpriteShifters();
             }
         }
 
@@ -215,12 +324,59 @@ class Ppu {
             const bg_pal1 = (this.bg_shifter_attrib_hi & bit_mux) > 0 ? 1 : 0;
             bg_palette = (bg_pal1 << 1) | bg_pal0;
 
-            // Transparent pixels always show the backdrop colour at $3F00
-            if (bg_pixel === 0) bg_palette = 0;
+            if (!this.mask.render_background_left && this.cycle - 1 < 8) bg_pixel = 0;
         }
 
-        // this.sprScreen.setPixel(this.cycle - 1, this.scanline, palScreen[Math.floor(Math.random() * 2) === 0 ? 0x3F : 0x30]);
-        this.sprScreen.setPixel(this.cycle - 1, this.scanline, this.getColorFromPaletteRam(bg_palette, bg_pixel));
+        let fg_pixel = 0x00;
+        let fg_palette = 0x00;
+        let fg_priority = false;
+
+        if (this.mask.render_sprites) {
+            this.bSpriteZeroBeingRendered = false;
+
+            // Sprites earlier in OAM have priority, so the first opaque pixel wins
+            for (let i = 0; i < this.spriteScanline.length; i++) {
+                const sprite = this.spriteScanline[i];
+                if (sprite.x === 0) {
+                    const fg_pixel_lo = (this.sprite_shifter_pattern_lo[i] & 0x80) > 0 ? 1 : 0;
+                    const fg_pixel_hi = (this.sprite_shifter_pattern_hi[i] & 0x80) > 0 ? 1 : 0;
+                    fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+                    fg_palette = (sprite.attribute & 0x03) + 0x04;
+                    fg_priority = (sprite.attribute & 0x20) === 0;
+
+                    if (fg_pixel !== 0) {
+                        if (i === 0) this.bSpriteZeroBeingRendered = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!this.mask.render_sprites_left && this.cycle - 1 < 8) fg_pixel = 0;
+        }
+
+        let pixel = 0x00;
+        let palette = 0x00;
+
+        // Transparent pixels always show the backdrop colour at $3F00
+        if (bg_pixel === 0 && fg_pixel > 0) {
+            pixel = fg_pixel;
+            palette = fg_palette;
+        } else if (bg_pixel > 0 && fg_pixel === 0) {
+            pixel = bg_pixel;
+            palette = bg_palette;
+        } else if (bg_pixel > 0 && fg_pixel > 0) {
+            pixel = fg_priority ? fg_pixel : bg_pixel;
+            palette = fg_priority ? fg_palette : bg_palette;
+
+            // Sprite zero hit happens when an opaque pixel of sprite 0 overlaps
+            // an opaque background pixel, whatever the priority
+            if (this.bSpriteZeroHitPossible && this.bSpriteZeroBeingRendered
+                && this.cycle >= 1 && this.cycle < 256) {
+                this.status.sprite_zero_hit = 1;
+            }
+        }
+
+        this.sprScreen.setPixel(this.cycle - 1, this.scanline, this.getColorFromPaletteRam(palette, pixel));
 
         // Advance renderer
         this.cycle++;
@@ -253,6 +409,7 @@ class Ppu {
             case 0x0003: // OAM address
                 break;
             case 0x0004: // OAM data
+                data = this.oam[this.oam_addr];
                 break;
             case 0x0005: // Scroll
                 break;
@@ -276,6 +433,8 @@ class Ppu {
         switch (addr) {
             case 0x0000: // Control
                 this.control.reg = data;
+                this.tram_addr.nametable_x = this.control.nametable_x;
+                this.tram_addr.nametable_y = this.control.nametable_y;
                 break;
             case 0x0001: // Mask
                 this.mask.reg = data;
@@ -283,8 +442,11 @@ class Ppu {
             case 0x0002: // Status
                 break;
             case 0x0003: // OAM address
+                this.oam_addr = data;
                 break;
             case 0x0004: // OAM data
+                this.oam[this.oam_addr] = data;
+                this.oam_addr = (this.oam_addr + 1) & 0xFF;
                 break;
             case 0x0005: // Scroll
                 if (this.address_latch === 0) {
@@ -439,6 +601,10 @@ class Ppu {
         this.control.reg = 0x00;
         this.vram_addr.reg = 0x0000;
         this.tram_addr.reg = 0x0000;
+        this.oam_addr = 0x00;
+        this.spriteScanline = [];
+        this.sprite_shifter_pattern_lo.fill(0);
+        this.sprite_shifter_pattern_hi.fill(0);
     }
 
     // Debugging utilities
@@ -479,3 +645,9 @@ class Ppu {
 }
 
 export default Ppu;
+function flipByte(b: number): number {
+    b = ((b & 0xF0) >> 4) | ((b & 0x0F) << 4);
+    b = ((b & 0xCC) >> 2) | ((b & 0x33) << 2);
+    b = ((b & 0xAA) >> 1) | ((b & 0x55) << 1);
+    return b;
+}

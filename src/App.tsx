@@ -4,12 +4,37 @@ import Ram from './components/Ram';
 import Cpu from './components/Cpu';
 import Code from './components/Code';
 import Cartridge from './nes/cartridge';
+import { Button } from './nes/controller';
 import type { CpuState } from './nes/cpu';
 import PatternTable from './components/PatternTable';
 import Palette from './components/Palette';
 
 const nes = new Bus();
 let bEmulationRun = false;
+
+const CONTROLLER_KEYS: Record<string, number> = {
+    KeyX: Button.A,
+    KeyZ: Button.B,
+    KeyA: Button.Select,
+    KeyS: Button.Start,
+    ArrowUp: Button.Up,
+    ArrowDown: Button.Down,
+    ArrowLeft: Button.Left,
+    ArrowRight: Button.Right,
+};
+
+function handleControllerKey(event: KeyboardEvent): boolean {
+    const button = CONTROLLER_KEYS[event.code];
+    if (button === undefined) return false;
+
+    event.preventDefault();
+    if (event.type === 'keydown') {
+        nes.controller[0] |= button;
+    } else {
+        nes.controller[0] &= ~button;
+    }
+    return true;
+}
 //let fResidualTime = 0.0;
 
 const App = () => {
@@ -20,6 +45,8 @@ const App = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const handleUserKeyPress = useCallback((event: KeyboardEvent) => {
+        if (handleControllerKey(event)) return;
+
         const { code } = event;
         switch (code) {
             case 'Space':
@@ -65,6 +92,7 @@ const App = () => {
 
     useEffect(() => {
         window.addEventListener('keydown', handleUserKeyPress);
+        window.addEventListener('keyup', handleControllerKey);
 
         async function getRom() {
             const response = await fetch('/roms/' + rom);
@@ -91,6 +119,7 @@ const App = () => {
 
         return () => {
             window.removeEventListener('keydown', handleUserKeyPress);
+            window.removeEventListener('keyup', handleControllerKey);
         };
     }, [handleUserKeyPress, rom]);
 
@@ -154,6 +183,7 @@ const App = () => {
                     <div className="column">
                         <canvas id="emulationCanvas" ref={canvasRef} width="256" height="240" />
                         <code className="instructions">SPACE = Run/Pause    C = Step Instruction    F = Step Frame    P = Palette    R = RESET    I = IRQ    N = NMI</code>
+                        <code className="instructions">Controller: Arrows = D-pad    X = A    Z = B    A = Select    S = Start</code>
                         <Ram nes={nes} nAddr={0x0000} nRows={16} nColumns={16} />
                         <Ram nes={nes} nAddr={0x8000} nRows={16} nColumns={16} />
                     </div>
