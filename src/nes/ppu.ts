@@ -1,56 +1,57 @@
-import { palScreen, Sprite } from "./graphics";
+import { palScreen, type Pixel, Sprite } from "./graphics";
 import LoopyRegister from "./registers/loopyRegister";
 import { MIRROR } from "./constants";
 import StatusRegister from "./registers/statusRegister";
+import type Cartridge from "./cartridge";
 import ControlRegister from "./registers/controlRegister";
 import MaskRegister from "./registers/maskRegister";
 
 class Ppu {
-    constructor() {
-        this.cartridge = null;
+    private cartridge: Cartridge | null = null;
 
-        this.palScreen = []
-        this.sprScreen = new Sprite(256, 240);
-        this.sprNameTable = [new Sprite(256, 240), new Sprite(256, 240)];
-        this.sprPatternTable = [new Sprite(128, 128), new Sprite(128, 128)];
+    // PPU memory: nametables, palettes and pattern tables (for CHR RAM, future)
+    tblName: number[][] = [];
+    tblPalette: number[] = [];
+    tblPattern: number[][] = [];
 
-        this.frame_complete = false;
-        this.scanline = 0;
-        this.cycle = 0;
-        this.nmi = false;
+    private readonly sprScreen = new Sprite(256, 240);
+    private readonly sprNameTable = [new Sprite(256, 240), new Sprite(256, 240)];
+    private readonly sprPatternTable = [new Sprite(128, 128), new Sprite(128, 128)];
 
-        this.status = new StatusRegister();
-        this.control = new ControlRegister();
-        this.mask = new MaskRegister();
+    frame_complete = false;
+    scanline = 0;
+    cycle = 0;
+    nmi = false;
 
-        this.address_latch = 0x00;
-        this.ppu_data_buffer = 0x00;
-        this.ppu_address = 0x0000;
+    readonly status = new StatusRegister();
+    readonly control = new ControlRegister();
+    readonly mask = new MaskRegister();
 
-        this.vram_addr = new LoopyRegister();
-        this.tram_addr = new LoopyRegister();
-        this.fine_x = 0x00;
+    address_latch = 0x00;
+    ppu_data_buffer = 0x00;
 
-        this.bg_next_tile_id = 0x00;
-        this.bg_next_tile_attrib = 0x00;
-        this.bg_next_tile_lsb = 0x00;
-        this.bg_next_tile_msb = 0x00;
+    readonly vram_addr = new LoopyRegister();
+    readonly tram_addr = new LoopyRegister();
+    fine_x = 0x00;
 
-        this.bg_shifter_pattern_lo = 0x0000;
-        this.bg_shifter_pattern_hi = 0x0000;
-        this.bg_shifter_attrib_lo = 0x0000;
-        this.bg_shifter_attrib_hi = 0x0000;
+    bg_next_tile_id = 0x00;
+    bg_next_tile_attrib = 0x00;
+    bg_next_tile_lsb = 0x00;
+    bg_next_tile_msb = 0x00;
 
-    }
+    bg_shifter_pattern_lo = 0x0000;
+    bg_shifter_pattern_hi = 0x0000;
+    bg_shifter_attrib_lo = 0x0000;
+    bg_shifter_attrib_hi = 0x0000;
 
-    connectCartridge(cartridge) {
+    connectCartridge(cartridge: Cartridge): void {
         this.cartridge = cartridge;
         this.tblName = [Array(1024).fill(0x00), Array(1024).fill(0x00)];
         this.tblPalette = Array(32).fill(0x00);
         this.tblPattern = [Array(4096).fill(0x00), Array(4096).fill(0x00)]; // Future
     }
 
-    IncrementScrollX() {
+    IncrementScrollX(): void {
         if (this.mask.render_background || this.mask.render_sprites) {
 
             if (this.vram_addr.coarse_x === 31) {
@@ -62,7 +63,7 @@ class Ppu {
         }
     }
 
-    IncrementScrollY() {
+    IncrementScrollY(): void {
         if (this.mask.render_background || this.mask.render_sprites) {
 
             if (this.vram_addr.fine_y < 7) {
@@ -82,7 +83,7 @@ class Ppu {
         }
     }
 
-    TransferAddressX() {
+    TransferAddressX(): void {
         // Ony if rendering is enabled
         if (this.mask.render_background || this.mask.render_sprites) {
             this.vram_addr.nametable_x = this.tram_addr.nametable_x;
@@ -90,7 +91,7 @@ class Ppu {
         }
     }
 
-    TransferAddressY() {
+    TransferAddressY(): void {
         // Ony if rendering is enabled
         if (this.mask.render_background || this.mask.render_sprites) {
             this.vram_addr.fine_y = this.tram_addr.fine_y;
@@ -99,7 +100,7 @@ class Ppu {
         }
     }
 
-    LoadBackgroundShifters() {
+    LoadBackgroundShifters(): void {
 
         this.bg_shifter_pattern_lo = (this.bg_shifter_pattern_lo & 0xFF00) | this.bg_next_tile_lsb;
         this.bg_shifter_pattern_hi = (this.bg_shifter_pattern_hi & 0xFF00) | this.bg_next_tile_msb;
@@ -107,7 +108,7 @@ class Ppu {
         this.bg_shifter_attrib_hi = (this.bg_shifter_attrib_hi & 0xFF00) | ((this.bg_next_tile_attrib & 0b10) ? 0xFF : 0x00);
     }
 
-    UpdateShifters() {
+    UpdateShifters(): void {
         if (this.mask.render_background) {
             // Shifting background tile pattern row
             this.bg_shifter_pattern_lo <<= 1;
@@ -119,7 +120,7 @@ class Ppu {
         }
     }
 
-    clock() {
+    clock(): void {
 
         if (this.scanline >= -1 && this.scanline < 240) {
 
@@ -203,15 +204,15 @@ class Ppu {
 
             // Select Plane pixels by extracting from the shifter 
             // at the required location. 
-            const p0_pixel = (this.bg_shifter_pattern_lo & bit_mux) > 0;
-            const p1_pixel = (this.bg_shifter_pattern_hi & bit_mux) > 0;
+            const p0_pixel = (this.bg_shifter_pattern_lo & bit_mux) > 0 ? 1 : 0;
+            const p1_pixel = (this.bg_shifter_pattern_hi & bit_mux) > 0 ? 1 : 0;
 
             // Combine to form pixel index
             bg_pixel = (p1_pixel << 1) | p0_pixel;
 
             // Get palette
-            const bg_pal0 = (this.bg_shifter_attrib_lo & bit_mux) > 0;
-            const bg_pal1 = (this.bg_shifter_attrib_hi & bit_mux) > 0;
+            const bg_pal0 = (this.bg_shifter_attrib_lo & bit_mux) > 0 ? 1 : 0;
+            const bg_pal1 = (this.bg_shifter_attrib_hi & bit_mux) > 0 ? 1 : 0;
             bg_palette = (bg_pal1 << 1) | bg_pal0;
 
             // Transparent pixels always show the backdrop colour at $3F00
@@ -234,7 +235,7 @@ class Ppu {
     }
 
     // Communication with main bus
-    cpuRead(addr, readOnly = false) {
+    cpuRead(addr: number, _readOnly = false): number {
         let data = 0x00;
 
         switch (addr) {
@@ -271,7 +272,7 @@ class Ppu {
         return data;
     }
 
-    cpuWrite(addr, data) {
+    cpuWrite(addr: number, data: number): void {
         switch (addr) {
             case 0x0000: // Control
                 this.control.reg = data;
@@ -315,11 +316,13 @@ class Ppu {
         }
     }
     // Communication with PPU bus
-    ppuRead(addr, readOnly = false) {
+    ppuRead(addr: number, _readOnly = false): number {
         let data = 0x00;
         addr &= 0x3FFF;
         const object = { data };
-        if (this.cartridge.ppuRead(addr, object)) {
+        if (!this.cartridge) {
+            // Nothing to read without a cartridge
+        } else if (this.cartridge.ppuRead(addr, object)) {
             data = object.data;
         } else if (addr >= 0x0000 && addr <= 0x1FFF) {
             data = this.tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF];
@@ -365,10 +368,13 @@ class Ppu {
 
         return data;
     }
-    ppuWrite(addr, data) {
+    ppuWrite(addr: number, data: number): void {
         addr &= 0x3FFF;
 
-        if (this.cartridge.ppuWrite(addr, data)) {
+        if (!this.cartridge) {
+            // Nothing to write to without a cartridge
+        } else if (this.cartridge.ppuWrite(addr, data)) {
+            // Cartridge address range
 
         } else if (addr >= 0x0000 && addr <= 0x1FFF) {
             this.tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF] = data;
@@ -414,7 +420,7 @@ class Ppu {
         }
     }
 
-    reset() {
+    reset(): void {
         this.fine_x = 0x00;
         this.address_latch = 0x00;
         this.ppu_data_buffer = 0x00;
@@ -436,15 +442,15 @@ class Ppu {
     }
 
     // Debugging utilities
-    getScreen() {
+    getScreen(): Sprite {
         return this.sprScreen;
     }
 
-    getNameTable(i) {
+    getNameTable(i: number): Sprite {
         return this.sprNameTable[i];
     }
 
-    getPatternTable(i, palette) {
+    getPatternTable(i: number, palette: number): Sprite {
         for (let nTileY = 0; nTileY < 16; nTileY++) {
             for (let nTileX = 0; nTileX < 16; nTileX++) {
                 let nOffset = nTileY * 256 + nTileX * 16;
@@ -466,7 +472,7 @@ class Ppu {
         return this.sprPatternTable[i];
     }
 
-    getColorFromPaletteRam(palette, pixel) {
+    getColorFromPaletteRam(palette: number, pixel: number): Pixel {
         return palScreen[this.ppuRead(0x3F00 + (palette << 2) + pixel)];
 
     }

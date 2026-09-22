@@ -11,7 +11,7 @@ import { muteConsole, NESTEST_ROM as ROM } from './helpers';
 const FRAMES = 10;
 
 describe('PPU background rendering (nestest.nes menu)', () => {
-    let bus;
+    let bus: Bus;
 
     beforeAll(() => {
         muteConsole();

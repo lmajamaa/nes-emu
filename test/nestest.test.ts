@@ -5,6 +5,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import Bus from '../src/nes/bus';
+import type Cpu from '../src/nes/cpu';
 import Cartridge from '../src/nes/cartridge';
 import { fmt, muteConsole, NESTEST_LOG as LOG, NESTEST_ROM as ROM, normalizeFlags, step } from './helpers';
 
@@ -13,8 +14,25 @@ const CONTEXT_LINES = 3;
 // C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0, 21 CYC:7
 const LINE_PATTERN = /^([0-9A-F]{4})  .{9}(.).*A:([0-9A-F]{2}) X:([0-9A-F]{2}) Y:([0-9A-F]{2}) P:([0-9A-F]{2}) SP:([0-9A-F]{2}).*CYC:(\d+)$/;
 
-function parseLog() {
-    const entries = [];
+interface CpuSnapshot {
+    pc: number;
+    a: number;
+    x: number;
+    y: number;
+    p: number;
+    sp: number;
+    cyc: number;
+}
+
+interface LogEntry extends CpuSnapshot {
+    line: number;
+    text: string;
+}
+
+const REGISTERS = ['pc', 'a', 'x', 'y', 'p', 'sp'] as const;
+
+function parseLog(): LogEntry[] {
+    const entries: LogEntry[] = [];
     const lines = readFileSync(LOG, 'utf8').split(/\r?\n/).filter(Boolean);
     for (const [index, line] of lines.entries()) {
         const m = line.match(LINE_PATTERN);
@@ -36,7 +54,7 @@ function parseLog() {
     return entries;
 }
 
-function stateOf(cpu, cyc) {
+function stateOf(cpu: Cpu, cyc: number): CpuSnapshot {
     return {
         pc: cpu.pc,
         a: cpu.a,
@@ -48,19 +66,19 @@ function stateOf(cpu, cyc) {
     };
 }
 
-function describeState(s) {
+function describeState(s: CpuSnapshot): string {
     return `PC:${fmt(s.pc, 4)} A:${fmt(s.a)} X:${fmt(s.x)} Y:${fmt(s.y)} P:${fmt(s.p)} SP:${fmt(s.sp)} CYC:${s.cyc}`;
 }
 
-function context(log, index) {
+function context(log: LogEntry[], index: number): string {
     return log.slice(Math.max(0, index - CONTEXT_LINES), index + 1)
         .map(e => `  ${String(e.line).padStart(4)}: ${e.text}`).join('\n');
 }
 
 describe('nestest.nes (official opcodes)', () => {
     const log = parseLog();
-    const trace = [];
-    let bus;
+    const trace: CpuSnapshot[] = [];
+    let bus: Bus;
 
     beforeAll(() => {
         muteConsole();
@@ -80,9 +98,9 @@ describe('nestest.nes (official opcodes)', () => {
     });
 
     test('registers match the log', () => {
-        const expected = e => ({ ...e, p: normalizeFlags(e.p) });
+        const expected = (e: LogEntry): CpuSnapshot => ({ ...e, p: normalizeFlags(e.p) });
         const index = log.findIndex((e, i) =>
-            ['pc', 'a', 'x', 'y', 'p', 'sp'].some(k => expected(e)[k] !== trace[i][k]));
+            REGISTERS.some(k => expected(e)[k] !== trace[i][k]));
         if (index !== -1) {
             throw new Error(
                 `First register mismatch at log line ${log[index].line}, after executing:\n` +

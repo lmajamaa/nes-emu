@@ -1,7 +1,7 @@
-import React from 'react';
-import { hex } from '../utilities';
+import { hex } from '../utils';
+import type { CpuState } from '../nes/cpu';
 
-const Cpu = ({ cpu }) => (
+const Cpu = ({ cpu }: { cpu: CpuState }) => (
     <div className="cpuArea">
         <h4>
             Status:

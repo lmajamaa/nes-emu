@@ -1,62 +1,80 @@
-import { instructions } from './instructions';
-import { hex, convertUint8ToInt } from '../utilities';
+import { instructions, isImplemented, type AddressingMode, type Mnemonic, type UnofficialMnemonic } from './instructions';
+import { hex, convertUint8ToInt } from '../utils';
 
 // MOS 6502 CPU Implementation -  Thanks for https://github.com/OneLoneCoder/olcNES and https://github.com/fredericcambon/nes
 
+export interface CpuBus {
+    cpuRead(addr: number, readOnly?: boolean): number;
+    cpuWrite(addr: number, data: number): void;
+}
+
+export interface InstructionInfo {
+    number: number;
+    opcode: Mnemonic | UnofficialMnemonic | '???';
+    addrmode: AddressingMode | '???';
+    size: number;
+    cycles: number;
+}
+
+export type CpuState = Pick<Cpu, 'a' | 'x' | 'y' | 'stkp' | 'pc' | 'c' | 'z' | 'i' | 'd' | 'b' | 'u' | 'v' | 'n'>;
+
 class Cpu {
-    constructor(bus) {
+    private readonly bus: CpuBus;
+
+    // Registers
+    a = 0; // Accumulator register
+    x = 0; // X register
+    y = 0; // Y register
+    stkp = 0x00; // Stack pointer (location on bus)
+    pc = 0x00; // Program counter
+    // this.status used to be here, using getFlags / setFlags instead
+
+    // Flags, each 0 or 1
+    c = 0; // Carry bit
+    z = 0; // Zero
+    i = 0; // Disable interrupts
+    d = 0; // Decimal mode (unused)
+    b = 0; // Break;
+    u = 0; // Unused;
+    v = 0; // Overflow
+    n = 0; // Negative
+
+    fetched = 0x00;
+    addr_abs = 0x0000;
+    addr_rel = 0x00;
+    opcode = 0x00;
+    cycles = 0;
+
+    constructor(bus: CpuBus) {
         this.bus = bus;
-
-        // Registers
-        this.a = 0; // Accumulator register
-        this.x = 0; // X register
-        this.y = 0; // Y register
-        this.stkp = 0x00; // Stack pointer (location on bus)
-        this.pc = 0x00; // Program counter
-        // this.status used to be here, using getFlags / setFlags instead
-
-        // Flags
-        this.c = 0; // Carry bit
-        this.z = 0; // Zero
-        this.i = 0; // Disable interrupts
-        this.d = 0; // Decimal mode (unused)
-        this.b = 0; // Break;
-        this.u = 0; // Unused;
-        this.v = 0; // Overflow
-        this.n = 0; // Negative
-
-        this.fetched = 0x00;
-        this.addr_abs = 0x0000;
-        this.addr_rel = 0x00;
-        this.opcode = 0x00;
-        this.cycles = 0;
     }
 
-    clock() {
+    clock(): void {
         if (this.cycles === 0) {
             this.opcode = this.read(this.pc);
             this.pc++;
 
             // Get starting number of cycles
-            const instruction = this.lookup(this.opcode);
-            this.cycles = instruction.cycles;
-            try {
-                const additional_cycle1 = this[instruction.addrmode]();
-                const additional_cycle2 = this[instruction.opcode]();
+            const { opcode, addrmode, cycles } = this.lookup(this.opcode);
+            this.cycles = cycles;
 
-                // An extra cycle is only needed when the addressing mode crossed
-                // a page AND the instruction is one that is affected by it
-                this.cycles += (additional_cycle1 & additional_cycle2);
-            } catch (e) {
-                console.log('Unable to execute opcode: ' + hex(this.opcode, 2), e);
-            }
+            // Opcodes missing from the table and unofficial opcodes that are
+            // not implemented yet are executed as illegal opcodes
+            const mode: AddressingMode = addrmode === '???' ? 'IMP' : addrmode;
+            const operation: Mnemonic = opcode !== '???' && isImplemented(opcode) ? opcode : 'XXX';
+            const additional_cycle1 = this[mode]();
+            const additional_cycle2 = this[operation]();
+
+            // An extra cycle is only needed when the addressing mode crossed
+            // a page AND the instruction is one that is affected by it
+            this.cycles += (additional_cycle1 & additional_cycle2);
             this.pc &= 0xFFFF;
         }
 
         if(this.cycles !== 0) this.cycles--;
     }
 
-    reset() {
+    reset(): void {
         // Get address to set program counter to
         this.addr_abs = 0xFFFC;
         const lo = this.read(this.addr_abs + 0);
@@ -81,7 +99,7 @@ class Cpu {
         this.cycles = 8;
     }
 
-    irq() {
+    irq(): void {
         if (this.i === 0) {
             this.push((this.pc >> 8) & 0x00FF);
             this.push(this.pc & 0x00FF);
@@ -103,7 +121,7 @@ class Cpu {
         }
     }
 
-    nmi() {
+    nmi(): void {
         this.push((this.pc >> 8) & 0x00FF);
         this.push(this.pc & 0x00FF);
 
@@ -121,7 +139,7 @@ class Cpu {
         this.cycles = 8;
     }
 
-    fetch() {
+    fetch(): number {
         const addrmode = this.lookup(this.opcode).addrmode;
         if (addrmode !== 'IMP') {
             this.fetched = this.read(this.addr_abs);
@@ -129,34 +147,30 @@ class Cpu {
         return this.fetched;
     }
 
-    read(addr) {
+    read(addr: number): number {
         return this.bus.cpuRead(addr & 0xFFFF, false);
     }
 
-    write(addr, data) {
+    write(addr: number, data: number): void {
         this.bus.cpuWrite(addr, data);
     }
 
-    /** Push a byte to the stack, the stack pointer wraps within page 1 */
-    push(data) {
+    push(data: number): void {
         this.write(0x0100 + this.stkp, data);
         this.stkp = (this.stkp - 1) & 0xFF;
     }
 
-    /** Pop a byte off the stack */
-    pull() {
+    pull(): number {
         this.stkp = (this.stkp + 1) & 0xFF;
         return this.read(0x0100 + this.stkp);
     }
 
-    /** Set Zero and Negative flags based on an 8-bit value */
-    setZN(value) {
+    setZN(value: number): void {
         this.z = (value & 0xFF) === 0x00 ? 1 : 0;
         this.n = (value & 0x80) !== 0 ? 1 : 0;
     }
 
-    /** Shared implementation of the branch instructions */
-    branch(condition) {
+    branch(condition: boolean): number {
         if (condition) {
             this.cycles++;
             this.addr_abs = (this.pc + this.addr_rel) & 0xFFFF;
@@ -170,7 +184,7 @@ class Cpu {
         return 0;
     }
 
-    getFlags() {
+    getFlags(): number {
         let flags = 0;
 
         flags = flags | (this.c << 0);
@@ -184,7 +198,7 @@ class Cpu {
         return flags;
     }
 
-    setFlags(value) {
+    setFlags(value: number): void {
         this.c = (value >> 0) & 1;
         this.z = (value >> 1) & 1;
         this.i = (value >> 2) & 1;
@@ -195,7 +209,7 @@ class Cpu {
         this.n = (value >> 7) & 1;
     }
 
-    lookup(number) {
+    lookup(number: number): InstructionInfo {
         const instruction = instructions[number];
         if (instruction) {
             const [opcode, addrmode, size, cycles] = instruction;
@@ -208,19 +222,19 @@ class Cpu {
 
     // Addressing modes
     /** Address Mode: Implied */
-    IMP() {
+    IMP(): number {
         this.fetched = this.a;
         return 0;
     }
 
     /** Address Mode: Immediate */
-    IMM() {
+    IMM(): number {
         this.addr_abs = this.pc++;
         return 0;
     }
 
     /** Address Mode: Zero Page */
-    ZP0() {
+    ZP0(): number {
         this.addr_abs = this.read(this.pc);
         this.pc++;
         this.addr_abs &= 0x00FF;
@@ -228,7 +242,7 @@ class Cpu {
     }
 
     /** Address Mode: Zero Page with X Offset */
-    ZPX() {
+    ZPX(): number {
         this.addr_abs = this.read(this.pc) + this.x;
         this.pc++;
         this.addr_abs &= 0x00FF;
@@ -236,7 +250,7 @@ class Cpu {
     }
 
     /** Address Mode: Zero Page with Y Offset */
-    ZPY() {
+    ZPY(): number {
         this.addr_abs = this.read(this.pc) + this.y;
         this.pc++;
         this.addr_abs &= 0x00FF;
@@ -244,7 +258,7 @@ class Cpu {
     }
 
     /** Address Mode: Absolute  */
-    ABS() {
+    ABS(): number {
         const lo = this.read(this.pc);
         this.pc++;
         const hi = this.read(this.pc);
@@ -255,7 +269,7 @@ class Cpu {
     }
 
     /** Address Mode: Absolute with X Offset */
-    ABX() {
+    ABX(): number {
         const lo = this.read(this.pc);
         this.pc++;
         const hi = this.read(this.pc);
@@ -271,7 +285,7 @@ class Cpu {
     }
 
     /** Address Mode: Absolute with Y Offset */
-    ABY() {
+    ABY(): number {
         const lo = this.read(this.pc);
         this.pc++;
         const hi = this.read(this.pc);
@@ -287,7 +301,7 @@ class Cpu {
     }
 
     /** Address Mode: Indirect */
-    IND() {
+    IND(): number {
         const ptr_lo = this.read(this.pc);
         this.pc++;
         const ptr_hi = this.read(this.pc);
@@ -305,7 +319,7 @@ class Cpu {
     }
 
     /** Address Mode: Indirect X */
-    IZX() {
+    IZX(): number {
         const t = this.read(this.pc);
         this.pc++;
 
@@ -317,7 +331,7 @@ class Cpu {
     }
 
     /** Address Mode: Indirect Y */
-    IZY() {
+    IZY(): number {
         const t = this.read(this.pc);
         this.pc++;
 
@@ -334,7 +348,7 @@ class Cpu {
     }
 
     /**  Address Mode: Relative */
-    REL() {
+    REL(): number {
         this.addr_rel = this.read(this.pc);
         this.pc++;
         if ((this.addr_rel & 0x80) !== 0) {
@@ -350,14 +364,14 @@ class Cpu {
     // Instructions
 
     /** Instruction: Bitwise Logic AND */
-    AND() {
+    AND(): number {
         this.fetch();
         this.a = this.a & this.fetched;
         this.setZN(this.a);
         return 1;
     }
     /** Instruction: Arithmetic Shift Left */
-    ASL() {
+    ASL(): number {
         this.fetch();
         const temp = this.fetched << 1;
         this.c = (temp & 0xFF00) !== 0 ? 1 : 0;
@@ -370,19 +384,19 @@ class Cpu {
         return 0;
     }
     /** Instruction: Branch if Carry Clear */
-    BCC() {
+    BCC(): number {
         return this.branch(this.c === 0);
     }
     /** Instruction: Branch if Carry Set */
-    BCS() {
+    BCS(): number {
         return this.branch(this.c === 1);
     }
     /** Instruction: Branch if Equal */
-    BEQ() {
+    BEQ(): number {
         return this.branch(this.z === 1);
     }
     /** Instruction: Test Bits in Memory with Accumulator */
-    BIT() {
+    BIT(): number {
         this.fetch();
         // Z comes from A & M, but N and V are copied straight from memory
         this.z = (this.a & this.fetched) === 0x00 ? 1 : 0;
@@ -391,19 +405,19 @@ class Cpu {
         return 0;
     }
     /** Instruction: Branch if Negative */
-    BMI() {
+    BMI(): number {
         return this.branch(this.n === 1);
     }
     /** Instruction: Branch if Not Equal */
-    BNE() {
+    BNE(): number {
         return this.branch(this.z === 0);
     }
     /** Instruction: Branch if Positive */
-    BPL() {
+    BPL(): number {
         return this.branch(this.n === 0);
     }
     /** Break */
-    BRK() {
+    BRK(): number {
         // BRK has a padding byte after the opcode, skip it
         this.pc++;
 
@@ -418,56 +432,55 @@ class Cpu {
         return 0;
     }
     /** Instruction: Branch if Overflow Clear */
-    BVC() {
+    BVC(): number {
         return this.branch(this.v === 0);
     }
     /** Instruction: Branch if Overflow Set */
-    BVS() {
+    BVS(): number {
         return this.branch(this.v === 1);
     }
     /** Instruction: Clear Carry Flag */
-    CLC() {
+    CLC(): number {
         this.c = 0;
         return 0;
     }
     /** Instruction: Clear Decimal Flag */
-    CLD() {
+    CLD(): number {
         this.d = 0;
         return 0;
     }
     /** Instruction: Disable Interrupts / Clear Interrupt Flag */
-    CLI() {
+    CLI(): number {
         this.i = 0;
         return 0;
     }
     /** Instruction: Clear Overflow Flag */
-    CLV() {
+    CLV(): number {
         this.v = 0;
         return 0;
     }
-    /** Shared implementation of CMP, CPX and CPY */
-    compare(register) {
+    compare(register: number): void {
         this.fetch();
         this.c = register >= this.fetched ? 1 : 0;
         this.setZN(register - this.fetched);
     }
     /** Instruction: Compare Accumulator */
-    CMP() {
+    CMP(): number {
         this.compare(this.a);
         return 1;
     }
     /** Compare X Register */
-    CPX() {
+    CPX(): number {
         this.compare(this.x);
         return 0;
     }
     /** Compare Y Register */
-    CPY() {
+    CPY(): number {
         this.compare(this.y);
         return 0;
     }
     /** Instruction: Decrement Value at Memory Location */
-    DEC() {
+    DEC(): number {
         this.fetch();
         const temp = (this.fetched - 1) & 0x00FF;
         this.write(this.addr_abs, temp);
@@ -475,26 +488,26 @@ class Cpu {
         return 0;
     }
     /** Decrement X Register */
-    DEX() {
+    DEX(): number {
         this.x = (this.x - 1) & 0xFF;
         this.setZN(this.x);
         return 0;
     }
     /** Decrement Y Register */
-    DEY() {
+    DEY(): number {
         this.y = (this.y - 1) & 0xFF;
         this.setZN(this.y);
         return 0;
     }
     /** Bitwise Logic XOR */
-    EOR() {
+    EOR(): number {
         this.fetch();
         this.a = this.a ^ this.fetched;
         this.setZN(this.a);
         return 1;
     }
     /** Instruction: Increment Value at Memory Location */
-    INC() {
+    INC(): number {
         this.fetch();
         const temp = (this.fetched + 1) & 0x00FF;
         this.write(this.addr_abs, temp);
@@ -502,24 +515,24 @@ class Cpu {
         return 0;
     }
     /** Instruction: Increment X Register */
-    INX() {
+    INX(): number {
         this.x = (this.x + 1) & 0xFF;
         this.setZN(this.x);
         return 0;
     }
     /** Instruction: Increment Y Register */
-    INY() {
+    INY(): number {
         this.y = (this.y + 1) & 0xFF;
         this.setZN(this.y);
         return 0;
     }
     /** Instruction: Jump To Location */
-    JMP() {
+    JMP(): number {
         this.pc = this.addr_abs;
         return 0;
     }
     /** Instruction: Jump To Sub-Routine */
-    JSR() {
+    JSR(): number {
         // The return address pushed is the last byte of the JSR instruction
         this.pc--;
 
@@ -534,28 +547,28 @@ class Cpu {
         return 0;
     }
     /** Instruction: Load The Accumulator */
-    LDA() {
+    LDA(): number {
         this.fetch();
         this.a = this.fetched;
         this.setZN(this.a);
         return 1;
     }
     /** Instruction: Load The X Register */
-    LDX() {
+    LDX(): number {
         this.fetch();
         this.x = this.fetched;
         this.setZN(this.x);
         return 1;
     }
     /** Instruction: Load The Y Register */
-    LDY() {
+    LDY(): number {
         this.fetch();
         this.y = this.fetched;
         this.setZN(this.y);
         return 1;
     }
     /** Instruction: Logical Shift Right */
-    LSR() {
+    LSR(): number {
         this.fetch();
         this.c = this.fetched & 0x0001;
         const temp = this.fetched >> 1;
@@ -567,7 +580,7 @@ class Cpu {
         }
         return 0;
     }
-    NOP() {
+    NOP(): number {
         // Sadly not all NOPs are equal, Ive added a few here
         // based on https://wiki.nesdev.com/w/index.php/CPU_unofficial_opcodes
         // and will add more based on game compatibility, and ultimately
@@ -586,25 +599,25 @@ class Cpu {
         return 0;
     }
     /** Instruction: Bitwise Logic OR */
-    ORA() {
+    ORA(): number {
         this.fetch();
         this.a = this.a | this.fetched;
         this.setZN(this.a);
         return 1;
     }
     /**  Instruction: Add with Carry In */
-    ADC() {
+    ADC(): number {
         this.fetch();
         return this.addWithCarry(this.fetched);
     }
     /** Instruction: Subtraction with Borrow In */
-    SBC() {
+    SBC(): number {
         this.fetch();
         // A - M - (1 - C) is the same as A + ~M + C
         return this.addWithCarry(this.fetched ^ 0x00FF);
     }
-    /** Shared implementation of ADC and SBC (the NES CPU has no decimal mode) */
-    addWithCarry(value) {
+    // No decimal mode, the NES CPU doesn't have one
+    addWithCarry(value: number): number {
         const temp = this.a + value + this.c;
         this.c = temp > 0xFF ? 1 : 0;
         // Overflow when both operands have the same sign and the result's sign differs
@@ -614,24 +627,24 @@ class Cpu {
         return 1;
     }
     /** Instruction: Push Accumulator to Stack */
-    PHA() {
+    PHA(): number {
         this.push(this.a);
         return 0;
     }
     /** Instruction: Push Status Register to Stack */
-    PHP() {
+    PHP(): number {
         // Status is pushed with the B flag set
         this.push(this.getFlags() | Flags6502.B | Flags6502.U);
         return 0;
     }
     /** Instruction: Pop Accumulator off Stack */
-    PLA() {
+    PLA(): number {
         this.a = this.pull();
         this.setZN(this.a);
         return 0;
     }
     /** Instruction: Pop Status Register off Stack */
-    PLP() {
+    PLP(): number {
         this.setFlags(this.pull());
         // B only exists on the stack and U always reads as set
         this.b = 0;
@@ -639,7 +652,7 @@ class Cpu {
         return 0;
     }
     /** Instruction: Rotate Left */
-    ROL() {
+    ROL(): number {
         this.fetch();
         const temp = (this.fetched << 1) | this.c;
         this.c = (temp & 0xFF00) !== 0 ? 1 : 0;
@@ -652,7 +665,7 @@ class Cpu {
         return 0;
     }
     /** Instruction: Rotate Right */
-    ROR() {
+    ROR(): number {
         this.fetch();
         const temp = (this.c << 7) | (this.fetched >> 1);
         this.c = this.fetched & 0x01;
@@ -665,7 +678,7 @@ class Cpu {
         return 0;
     }
     /** Instruction: Return from Interrupt */
-    RTI() {
+    RTI(): number {
         this.setFlags(this.pull());
         // B only exists on the stack and U always reads as set
         this.b = 0;
@@ -676,7 +689,7 @@ class Cpu {
         return 0;
     }
     /** Instruction: Return from Sub-Routine */
-    RTS() {
+    RTS(): number {
         this.pc = this.pull();
         this.pc |= this.pull() << 8;
 
@@ -684,72 +697,72 @@ class Cpu {
         return 0;
     }
     /** Instruction: Set Carry Flag */
-    SEC() {
+    SEC(): number {
         this.c = 1;
         return 0;
     }
     /** Set Decimal Flag */
-    SED() {
+    SED(): number {
         this.d = 1;
         return 0;
     }
     /** Set Interrupt Flag / Enable Interrupts */
-    SEI() {
+    SEI(): number {
         this.i = 1;
         return 0;
     }
     /** Instruction: Store Accumulator at Address */
-    STA() {
+    STA(): number {
         this.write(this.addr_abs, this.a);
         return 0;
     }
     /** Store X Register at Address */
-    STX() {
+    STX(): number {
         this.write(this.addr_abs, this.x);
         return 0;
     }
     /** Instruction: Store Y Register at Address */
-    STY() {
+    STY(): number {
         this.write(this.addr_abs, this.y);
         return 0;
     }
     /** Instruction: Transfer Accumulator to X Register */
-    TAX() {
+    TAX(): number {
         this.x = this.a;
         this.setZN(this.x);
         return 0;
     }
     /** Instruction: Transfer Accumulator to Y Register */
-    TAY() {
+    TAY(): number {
         this.y = this.a;
         this.setZN(this.y);
         return 0;
     }
     /** Instruction: Transfer Stack Pointer to X Register */
-    TSX() {
+    TSX(): number {
         this.x = this.stkp;
         this.setZN(this.x);
         return 0;
     }
     /**  Instruction: Transfer X Register to Accumulator */
-    TXA() {
+    TXA(): number {
         this.a = this.x;
         this.setZN(this.a);
         return 0;
     }
     /** Instruction: Transfer X Register to Stack Pointer */
-    TXS() {
+    TXS(): number {
         this.stkp = this.x;
         return 0;
     }
     /** Instruction: Transfer Y Register to Accumulator */
-    TYA() {
+    TYA(): number {
         this.a = this.y;
         this.setZN(this.a);
         return 0;
     }
     /** Illegal opcodes */
-    XXX() {
+    XXX(): number {
         console.log('Illegal opcode', this.opcode);
         return 0;
     }
@@ -757,14 +770,14 @@ class Cpu {
     ///////////////////////////////////////////////////////////////////////////////
 
     // Helper functions
-    complete() {
+    complete(): boolean {
         return this.cycles === 0 || Number.isNaN(this.cycles);
     }
 
-    disassemble(nStart, nStop) {
+    disassemble(nStart: number, nStop: number): string[] {
         let addr = nStart;
         let value = 0x00; let hi = 0x00; let lo = 0x00;
-        const mapLines = [];
+        const mapLines: string[] = [];
         let line_addr = 0;
         while (addr <= nStop) {
             line_addr = addr;

@@ -2,11 +2,20 @@
 // (https://github.com/SingleStepTests/65x02): downloads the official opcodes, keeps a
 // small sample of each and bundles them into one gzipped file. See test/data/README.md.
 //
-// Usage: bun scripts/fetch-cpu-tests.js [casesPerOpcode=100]
+// Usage: bun scripts/fetch-cpu-tests.ts [casesPerOpcode=100]
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import type { SingleStepBundle, SingleStepState } from '../test/helpers';
+
+// Upstream format: cycles holds the bus activity of every cycle
+interface UpstreamCase {
+    name: string;
+    initial: SingleStepState;
+    final: SingleStepState;
+    cycles: [addr: number, value: number, type: 'read' | 'write'][];
+}
 
 const BASE_URL = 'https://raw.githubusercontent.com/SingleStepTests/65x02/main/6502/v1/';
 const OUT_DIR = new URL('../test/data/6502/', import.meta.url);
@@ -42,8 +51,7 @@ const FLAG_D = 0x08;
 if (import.meta.main) {
     await mkdir(OUT_DIR, { recursive: true });
 
-    // { "00": [cases...], "01": [...], ... }
-    const bundle = {};
+    const bundle: SingleStepBundle = {};
     for (const opcode of OFFICIAL_OPCODES) {
         const name = opcode.toString(16).padStart(2, '0');
         const response = await fetch(`${BASE_URL}${name}.json`);
@@ -51,7 +59,7 @@ if (import.meta.main) {
             throw new Error(`Failed to download ${name}.json: ${response.status}`);
         }
 
-        let cases = await response.json();
+        let cases: UpstreamCase[] = await response.json();
         if (DECIMAL_SENSITIVE.has(opcode)) {
             cases = cases.filter(c => (c.initial.p & FLAG_D) === 0);
         }

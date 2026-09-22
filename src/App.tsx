@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import Bus from './nes/bus';
 import Ram from './components/Ram';
 import Cpu from './components/Cpu';
 import Code from './components/Code';
 import Cartridge from './nes/cartridge';
+import type { CpuState } from './nes/cpu';
 import PatternTable from './components/PatternTable';
 import Palette from './components/Palette';
 
@@ -12,13 +13,13 @@ let bEmulationRun = false;
 //let fResidualTime = 0.0;
 
 const App = () => {
-    const [rom, setRom] = useState('nestest.nes');
-    const [cpu, setCpu] = useState(nes.cpu);
-    const [disassembly, setDisassembly] = useState([]);
+    const [rom] = useState('nestest.nes');
+    const [cpu, setCpu] = useState<CpuState>(nes.cpu);
+    const [disassembly, setDisassembly] = useState<string[]>([]);
     const [selectedPalette, setSelectedPalette] = useState(0x00);
-    const canvasRef = useRef(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const handleUserKeyPress = useCallback(event => {
+    const handleUserKeyPress = useCallback((event: KeyboardEvent) => {
         const { code } = event;
         switch (code) {
             case 'Space':
@@ -110,31 +111,27 @@ const App = () => {
 
     function updateCanvas() {
         const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        var canvasData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const context = canvas?.getContext('2d');
+        if (!canvas || !context) return;
+
+        const canvasData = context.getImageData(0, 0, canvas.width, canvas.height);
         const screen = nes.ppu.getScreen();
-       
+
         for (let x = 0; x < screen.width; x++) {
             for (let y = 0; y < screen.height; y++) {
-                let pixel = undefined;
-                try {
-                pixel = screen.getPixel(x, y);
-                let index = (x * 4 + (y * screen.width) * 4);
+                const pixel = screen.getPixel(x, y);
+                const index = (x * 4 + (y * screen.width) * 4);
                 canvasData.data[index + 0] = pixel.r;
                 canvasData.data[index + 1] = pixel.g;
                 canvasData.data[index + 2] = pixel.b;
                 canvasData.data[index + 3] = 255;
-            } catch(e) {
-                console.log('Failed to update screen', screen,x, y, pixel);
-                break;
-            }
             }
         }
-        
+
         context.putImageData(canvasData, 0, 0);
     }
 
-    const palettes = [];
+    const palettes: string[][] = [];
     if (nes.cartridge) {
         for (let p = 0; p < 8; p++) {
             const palette = [];
@@ -157,18 +154,18 @@ const App = () => {
                     <div className="column">
                         <canvas id="emulationCanvas" ref={canvasRef} width="256" height="240" />
                         <code className="instructions">SPACE = Run/Pause    C = Step Instruction    F = Step Frame    P = Palette    R = RESET    I = IRQ    N = NMI</code>
-                        <Ram nes={nes} x={2} y={2} nAddr={0x0000} nRows={16} nColumns={16} />
-                        <Ram nes={nes} x={2} y={182} nAddr={0x8000} nRows={16} nColumns={16} />
+                        <Ram nes={nes} nAddr={0x0000} nRows={16} nColumns={16} />
+                        <Ram nes={nes} nAddr={0x8000} nRows={16} nColumns={16} />
                     </div>
                     <div className="column">
                         <Cpu cpu={cpu} />
-                        <Code pc={cpu.pc} mapAsm={disassembly} x={512} y={72} nLines={26} />
+                        <Code pc={cpu.pc} mapAsm={disassembly} />
                         <div>
                             {palettes.map((palette, index) => <Palette key={index} size={10} data={palette} selected={selectedPalette === index} />)}
                         </div>
                         <div>
-                            <PatternTable patternTable={patternTable0} />
-                            <PatternTable patternTable={patternTable1} />
+                            {patternTable0 && <PatternTable patternTable={patternTable0} />}
+                            {patternTable1 && <PatternTable patternTable={patternTable1} />}
                         </div>
                     </div>
                 </div>

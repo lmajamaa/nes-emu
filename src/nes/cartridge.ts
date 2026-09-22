@@ -1,21 +1,31 @@
 import iNESHeader from './iNESHeader';
+import type Mapper from './mappers/mapper';
 import Mapper_000 from './mappers/mapper_000';
-import { MIRROR } from './constants';
+import { MIRROR, type Mirror } from './constants';
 
 const headerSize = 16;
 const prgBankSize = 16384;
 const chrBankSize = 8192;
 
+export interface ReadResult {
+    data: number;
+}
+
 class Cartridge {
-    constructor(data) {
+    readonly mirror: Mirror;
+    private readonly nPRGBanks: number = 0;
+    private readonly nCHRBanks: number = 0;
+    private readonly vPRGMemory: Uint8Array = new Uint8Array(0);
+    private readonly vCHRMemory: Uint8Array = new Uint8Array(0);
+    private readonly pMapper: Mapper;
+
+    constructor(data: ArrayBuffer | Uint8Array) {
         let index = 0;
         const byteArray = new Uint8Array(data);
         const header = new iNESHeader(byteArray.subarray(index, headerSize));
-        //console.log('iNES header', header);
         index += headerSize;
         // Skip training data
         if (header.mapper1 & 0x04) {
-            //console.log('Skipping trainer data');
             index += 512;
         }
 
@@ -24,23 +34,18 @@ class Cartridge {
         this.mirror = (header.mapper1 & 0x01) ? MIRROR.VERTICAL : MIRROR.HORIZONTAL;
 
         // Discover file format
-        const nFileType = 1;
+        const nFileType: number = 1;
 
         if (nFileType === 0) {
             console.log('Not implemented yet');
         } else if (nFileType === 1) {
             this.nPRGBanks = header.prg_rom_chunks;
-            this.vPRGMemory = Array(this.nPRGBanks * prgBankSize);
-            this.vPRGMemory = byteArray.subarray(index, index + this.vPRGMemory.length)
-
+            this.vPRGMemory = byteArray.subarray(index, index + this.nPRGBanks * prgBankSize);
             index += this.vPRGMemory.length;
 
             this.nCHRBanks = header.chr_rom_chunks;
-            this.vCHRMemory = Array(this.nCHRBanks * chrBankSize);
-            this.vCHRMemory = byteArray.subarray(index, index + this.vCHRMemory.length)
-
+            this.vCHRMemory = byteArray.subarray(index, index + this.nCHRBanks * chrBankSize);
             index += this.vCHRMemory.length;
-
         } else if (nFileType === 2) {
             console.log('Not implemented yet');
         }
@@ -58,59 +63,45 @@ class Cartridge {
     }
 
     // Communication with main bus
-    cpuRead(addr, object) {
-        let mapped_addr = 0;
-        let mapper_obj = { mapped_addr };
+    cpuRead(addr: number, object: ReadResult): boolean {
+        const mapper_obj = { mapped_addr: 0 };
         if (this.pMapper.cpuMapRead(addr, mapper_obj)) {
-            mapped_addr = mapper_obj.mapped_addr;
-            object.data = this.vPRGMemory[mapped_addr];
+            object.data = this.vPRGMemory[mapper_obj.mapped_addr];
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
-    cpuWrite(addr, data) {
-        let mapped_addr = 0;
-        let mapper_obj = { mapped_addr };
+    cpuWrite(addr: number, data: number): boolean {
+        const mapper_obj = { mapped_addr: 0 };
         if (this.pMapper.cpuMapWrite(addr, mapper_obj)) {
-            mapped_addr = mapper_obj.mapped_addr;
-            this.vPRGMemory[mapped_addr] = data;
+            this.vPRGMemory[mapper_obj.mapped_addr] = data;
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
     // Communication with PPU bus
-    ppuRead(addr, object) {
-        let mapped_addr = 0;
-        let mapper_obj = { mapped_addr };
+    ppuRead(addr: number, object: ReadResult): boolean {
+        const mapper_obj = { mapped_addr: 0 };
         if (this.pMapper.ppuMapRead(addr, mapper_obj)) {
-            mapped_addr = mapper_obj.mapped_addr;
-            object.data = this.vCHRMemory[mapped_addr];
+            object.data = this.vCHRMemory[mapper_obj.mapped_addr];
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
-    ppuWrite(addr, data) {
-        let mapped_addr = 0;
-        let mapper_obj = { mapped_addr };
+    ppuWrite(addr: number, data: number): boolean {
+        const mapper_obj = { mapped_addr: 0 };
         if (this.pMapper.ppuMapWrite(addr, mapper_obj)) {
-            mapped_addr = mapper_obj.mapped_addr;
-            this.vCHRMemory[mapped_addr] = data;
+            this.vCHRMemory[mapper_obj.mapped_addr] = data;
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
-    reset() {
-        if (this.pMapper) {
-            this.pMapper.reset();
-        }
+    reset(): void {
+        this.pMapper.reset();
     }
 }
 

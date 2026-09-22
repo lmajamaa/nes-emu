@@ -7,13 +7,13 @@ import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import Cpu from '../src/nes/cpu';
 import { instructions } from '../src/nes/instructions';
-import { FlatBus, fmt, muteConsole, normalizeFlags, SINGLE_STEP_TESTS, step } from './helpers';
+import { FlatBus, fmt, muteConsole, normalizeFlags, SINGLE_STEP_TESTS, step, type SingleStepBundle, type SingleStepCase } from './helpers';
 
 const MAX_REPORTED_CASES = 3;
 
 beforeAll(muteConsole);
 
-function runCase(testCase) {
+function runCase(testCase: SingleStepCase): string[] {
     const bus = new FlatBus();
     const cpu = new Cpu(bus);
     const { initial, final } = testCase;
@@ -31,8 +31,8 @@ function runCase(testCase) {
 
     const cycles = step(cpu);
 
-    const errors = [];
-    const check = (label, actual, expected, length) => {
+    const errors: string[] = [];
+    const check = (label: string, actual: number, expected: number, length = 2) => {
         if (actual !== expected) {
             errors.push(`${label}: got ${fmt(actual, length)}, expected ${fmt(expected, length)}`);
         }
@@ -51,7 +51,7 @@ function runCase(testCase) {
 }
 
 // { "00": [cases...], "01": [...], ... } keyed by opcode in hex
-const bundle = JSON.parse(gunzipSync(readFileSync(SINGLE_STEP_TESTS)));
+const bundle: SingleStepBundle = JSON.parse(gunzipSync(readFileSync(SINGLE_STEP_TESTS)).toString());
 
 describe('6502 SingleStepTests', () => {
     // Sort, as object keys like "10" would otherwise be ordered before "0a"

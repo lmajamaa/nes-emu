@@ -1,15 +1,14 @@
 class MaskRegister {
-    constructor() {
-        this.greyscale = 0;
-        this.render_background_left = 0;
-        this.render_sprites_left = 0;
-        this.render_background = 0;
-        this.render_sprites = 0;
-        this.enhance_red = 0;
-        this.enhance_green = 0;
-        this.enhance_blue = 0;
-    }
-    get reg() {
+    greyscale = 0;
+    render_background_left = 0;
+    render_sprites_left = 0;
+    render_background = 0;
+    render_sprites = 0;
+    enhance_red = 0;
+    enhance_green = 0;
+    enhance_blue = 0;
+
+    get reg(): number {
         let value = 0;
         value = value | (this.greyscale << 0);
         value = value | (this.render_background_left << 1);
@@ -22,7 +21,7 @@ class MaskRegister {
         return value;
     }
 
-    set reg(value) {
+    set reg(value: number) {
         this.greyscale = (value >> 0) & 1;
         this.render_background_left = (value >> 1) & 1;
         this.render_sprites_left = (value >> 2) & 1;

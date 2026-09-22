@@ -1,24 +1,24 @@
-import Mapper from './mapper';
+import Mapper, { type MappedAddress } from './mapper';
 
 class Mapper_000 extends Mapper {
-    cpuMapRead(addr, object) {
-        if (addr >= 0x8000 & addr <= 0xFFFF) {
+    cpuMapRead(addr: number, object: MappedAddress): boolean {
+        if (addr >= 0x8000 && addr <= 0xFFFF) {
             object.mapped_addr = addr & (this._nPRGBanks > 1 ? 0x7FFF : 0x3FFF);
             return true;
         }
         return false;
     }
 
-    cpuMapWrite(addr, object) {
-        if (addr >= 0x8000 & addr <= 0xFFFF) {
+    cpuMapWrite(addr: number, object: MappedAddress): boolean {
+        if (addr >= 0x8000 && addr <= 0xFFFF) {
             object.mapped_addr = addr & (this._nPRGBanks > 1 ? 0x7FFF : 0x3FFF);
             return true;
         }
         return false;
     }
 
-    ppuMapRead(addr, object) {
-        if (addr >= 0x0000 & addr <= 0x1FFF) {
+    ppuMapRead(addr: number, object: MappedAddress): boolean {
+        if (addr >= 0x0000 && addr <= 0x1FFF) {
             object.mapped_addr = addr;
             return true;
         }
@@ -26,7 +26,7 @@ class Mapper_000 extends Mapper {
         return false;
     }
 
-    ppuMapWrite(addr, object) {
+    ppuMapWrite(addr: number, object: MappedAddress): boolean {
         if (addr >= 0x0000 && addr <= 0x1FFF) {
             if (this._nCHRBanks === 0) {
                 // Treat as RAM
@@ -37,7 +37,7 @@ class Mapper_000 extends Mapper {
         return false;
     }
 
-    reset() {
+    reset(): void {
 
     }
 }

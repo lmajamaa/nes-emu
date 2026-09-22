@@ -1,16 +1,14 @@
 class ControlRegister {
-    constructor() {
-        this.nametable_x = 0;
-        this.nametable_y = 0;
-        this.increment_mode = 0;
-        this.pattern_sprite = 0;
-        this.pattern_background = 0;
-        this.sprite_mode = 0;
-        this.slave_mode = 0;
-        this.enable_nmi = 0;
-    }
+    nametable_x = 0;
+    nametable_y = 0;
+    increment_mode = 0;
+    pattern_sprite = 0;
+    pattern_background = 0;
+    sprite_mode = 0;
+    slave_mode = 0;
+    enable_nmi = 0;
 
-    get reg() {
+    get reg(): number {
         let value = 0;
         value = value | (this.nametable_x << 0);
         value = value | (this.nametable_y << 1);
@@ -23,7 +21,7 @@ class ControlRegister {
         return value;
     }
 
-    set reg(value) {
+    set reg(value: number) {
         this.nametable_x = (value >> 0) & 1;
         this.nametable_y = (value >> 1) & 1;
         this.increment_mode = (value >> 2) & 1;

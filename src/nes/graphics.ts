@@ -1,13 +1,17 @@
 export class Pixel {
-    constructor(r, g, b) {
-        this.r = r;
-        this.g = g;
-        this.b = b;
-    }
+    constructor(
+        readonly r: number,
+        readonly g: number,
+        readonly b: number,
+    ) {}
 }
 
 export class Sprite {
-    constructor(width, height) {
+    readonly width: number;
+    readonly height: number;
+    private readonly content: Pixel[][];
+
+    constructor(width: number, height: number) {
         this.width = width;
         this.height = height;
 
@@ -16,18 +20,18 @@ export class Sprite {
         this.content = Array.from({ length: width + 1 }, () => Array(height + 1).fill(black));
     }
 
-    getPixel(x, y) {
+    getPixel(x: number, y: number): Pixel {
         return this.content[x][y];
     }
 
-    setPixel(x, y, pixel) {
+    setPixel(x: number, y: number, pixel: Pixel): void {
         if (x >= 0 && y >= 0 && x <= this.width && y <= this.height) {
             this.content[x][y] = pixel;
         }
     }
 }
 
-export const palScreen = [
+export const palScreen: readonly Pixel[] = [
     new Pixel(84, 84, 84),
     new Pixel(0, 30, 116),
     new Pixel(8, 16, 144),

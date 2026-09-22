@@ -1,4 +1,26 @@
-export const instructions = {
+export type AddressingMode =
+  'IMP' | 'IMM' | 'ZP0' | 'ZPX' | 'ZPY' | 'ABS' | 'ABX' | 'ABY' | 'IND' | 'IZX' | 'IZY' | 'REL';
+
+// Official instructions, plus XXX for illegal opcodes
+export type Mnemonic =
+  'ADC' | 'AND' | 'ASL' | 'BCC' | 'BCS' | 'BEQ' | 'BIT' | 'BMI' | 'BNE' | 'BPL' | 'BRK' | 'BVC' | 'BVS' |
+  'CLC' | 'CLD' | 'CLI' | 'CLV' | 'CMP' | 'CPX' | 'CPY' | 'DEC' | 'DEX' | 'DEY' | 'EOR' | 'INC' | 'INX' |
+  'INY' | 'JMP' | 'JSR' | 'LDA' | 'LDX' | 'LDY' | 'LSR' | 'NOP' | 'ORA' | 'PHA' | 'PHP' | 'PLA' | 'PLP' |
+  'ROL' | 'ROR' | 'RTI' | 'RTS' | 'SBC' | 'SEC' | 'SED' | 'SEI' | 'STA' | 'STX' | 'STY' | 'TAX' | 'TAY' |
+  'TSX' | 'TXA' | 'TXS' | 'TYA' | 'XXX';
+
+// Unofficial instructions in the table that are not implemented yet
+export type UnofficialMnemonic = 'DCP' | 'ISC' | 'RLA' | 'RRA' | 'SLO';
+
+const UNOFFICIAL: ReadonlySet<string> = new Set<UnofficialMnemonic>(['DCP', 'ISC', 'RLA', 'RRA', 'SLO']);
+
+export function isImplemented(mnemonic: Mnemonic | UnofficialMnemonic): mnemonic is Mnemonic {
+  return !UNOFFICIAL.has(mnemonic);
+}
+
+export type Instruction = readonly [mnemonic: Mnemonic | UnofficialMnemonic, mode: AddressingMode, size: number, cycles: number];
+
+export const instructions: Readonly<Record<number, Instruction>> = {
   0: ['BRK', 'IMP', 1, 7],
   1: ['ORA', 'IZX', 2, 6],
   2: ['XXX', 'IMP', 0, 2],

@@ -1,8 +1,16 @@
-import React from 'react';
-import { hex } from '../utilities';
+import type { ReactElement } from 'react';
+import { hex } from '../utils';
+import type Bus from '../nes/bus';
 
-const Ram = ({ nes, x, y, nAddr, nRows, nColumns }) => {
-    const items = [];
+interface RamProps {
+    nes: Bus;
+    nAddr: number;
+    nRows: number;
+    nColumns: number;
+}
+
+const Ram = ({ nes, nAddr, nRows, nColumns }: RamProps) => {
+    const items: ReactElement[] = [];
 
     for (let row = 0; row < nRows; row++) {
         let sOffset = '$' + hex(nAddr, 4) + ': ';
