@@ -4,7 +4,6 @@ import { MIRROR } from "./constants";
 import StatusRegister from "./registers/statusRegister";
 import ControlRegister from "./registers/controlRegister";
 import MaskRegister from "./registers/maskRegister";
-import { hex } from "../utilities";
 
 class Ppu {
     constructor() {
@@ -46,9 +45,9 @@ class Ppu {
 
     connectCartridge(cartridge) {
         this.cartridge = cartridge;
-        this.tblName = Array(2).fill(Array(1024));
+        this.tblName = [Array(1024).fill(0x00), Array(1024).fill(0x00)];
         this.tblPalette = Array(32).fill(0x00);
-        this.tblPattern = Array(2).fill(Array(4096)); // Future
+        this.tblPattern = [Array(4096).fill(0x00), Array(4096).fill(0x00)]; // Future
     }
 
     IncrementScrollX() {
@@ -56,7 +55,7 @@ class Ppu {
 
             if (this.vram_addr.coarse_x === 31) {
                 this.vram_addr.coarse_x = 0;
-                this.vram_addr.nametable_x = ~this.vram_addr.nametable_x;
+                this.vram_addr.nametable_x ^= 1;
             } else {
                 this.vram_addr.coarse_x++;
             }
@@ -69,11 +68,11 @@ class Ppu {
             if (this.vram_addr.fine_y < 7) {
                 this.vram_addr.fine_y++;
             } else {
-                this.vram_addr = 0;
+                this.vram_addr.fine_y = 0;
 
                 if (this.vram_addr.coarse_y === 29) {
                     this.vram_addr.coarse_y = 0;
-                    this.vram_addr.nametable_y = ~this.vram_addr.nametable_y;
+                    this.vram_addr.nametable_y ^= 1;
                 } else if (this.vram_addr.coarse_y === 31) {
                     this.vram_addr.coarse_y = 0;
                 } else {
@@ -132,7 +131,7 @@ class Ppu {
 
                 this.UpdateShifters();
 
-                switch ((this.cycle - 1 % 8)) {
+                switch ((this.cycle - 1) % 8) {
                     case 0:
                         this.LoadBackgroundShifters();
                         this.bg_next_tile_id = this.ppuRead(0x2000 | (this.vram_addr.reg & 0x0FFF));
@@ -147,14 +146,14 @@ class Ppu {
                         this.bg_next_tile_attrib &= 0x03;
                         break;
                     case 4:
-                        this.bg_next_tile_lsb = this.ppuRead((this.control.pattern_background << 12))
+                        this.bg_next_tile_lsb = this.ppuRead((this.control.pattern_background << 12)
                             + (this.bg_next_tile_id << 4)
-                            + (this.vram_addr.fine_y + 0);
+                            + (this.vram_addr.fine_y + 0));
                         break;
                     case 6:
-                        this.bg_next_tile_msb = this.ppuRead((this.control.pattern_background << 12))
+                        this.bg_next_tile_msb = this.ppuRead((this.control.pattern_background << 12)
                             + (this.bg_next_tile_id << 4)
-                            + (this.vram_addr.fine_y + 8);
+                            + (this.vram_addr.fine_y + 8));
                         break;
                     case 7:
                         this.IncrementScrollX();
@@ -185,7 +184,6 @@ class Ppu {
             this.status.vertical_blank = 1;
             if (this.control.enable_nmi === 1) {
                 this.nmi = true;
-                console.log('ppu nmi', this.nmi);
             }
         }
 
@@ -215,6 +213,9 @@ class Ppu {
             const bg_pal0 = (this.bg_shifter_attrib_lo & bit_mux) > 0;
             const bg_pal1 = (this.bg_shifter_attrib_hi & bit_mux) > 0;
             bg_palette = (bg_pal1 << 1) | bg_pal0;
+
+            // Transparent pixels always show the backdrop colour at $3F00
+            if (bg_pixel === 0) bg_palette = 0;
         }
 
         // this.sprScreen.setPixel(this.cycle - 1, this.scanline, palScreen[Math.floor(Math.random() * 2) === 0 ? 0x3F : 0x30]);
@@ -260,7 +261,7 @@ class Ppu {
                 data = this.ppu_data_buffer;
                 this.ppu_data_buffer = this.ppuRead(this.vram_addr.reg);
 
-                if (this.vram_addr.reg > 0x3F00) data = this.ppu_data_buffer;
+                if (this.vram_addr.reg >= 0x3F00) data = this.ppu_data_buffer;
                 this.vram_addr.reg += (this.control.increment_mode ? 32 : 1);
                 break;
             default:
@@ -273,7 +274,6 @@ class Ppu {
     cpuWrite(addr, data) {
         switch (addr) {
             case 0x0000: // Control
-                console.log('writing to control: ', hex(data, 4));
                 this.control.reg = data;
                 break;
             case 0x0001: // Mask
@@ -302,7 +302,7 @@ class Ppu {
                     this.address_latch = 1;
                 } else {
                     this.tram_addr.reg = (this.tram_addr.reg & 0xFF00) | data;
-                    this.vram_addr = this.tram_addr;
+                    this.vram_addr.reg = this.tram_addr.reg;
                     this.address_latch = 0;
                 }
                 break;
@@ -324,6 +324,7 @@ class Ppu {
         } else if (addr >= 0x0000 && addr <= 0x1FFF) {
             data = this.tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF];
         } else if (addr >= 0x2000 && addr <= 0x3EFF) {
+            addr &= 0x0FFF;
             if (this.cartridge.mirror === MIRROR.VERTICAL) {
                 // Vertical
                 if (addr >= 0x0000 && addr <= 0x03FF) {
@@ -372,6 +373,7 @@ class Ppu {
         } else if (addr >= 0x0000 && addr <= 0x1FFF) {
             this.tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF] = data;
         } else if (addr >= 0x2000 && addr <= 0x3EFF) {
+            addr &= 0x0FFF;
             if (this.cartridge.mirror === MIRROR.VERTICAL) {
                 // Vertical
                 if (addr >= 0x0000 && addr <= 0x03FF) {
@@ -450,9 +452,9 @@ class Ppu {
                 for (let row = 0; row < 8; row++) {
 
                     let tile_lsb = this.ppuRead(i * 0x1000 + nOffset + row + 0);
-                    let tile_msb = this.ppuRead(i * 0x1000 + nOffset + row + 1);
+                    let tile_msb = this.ppuRead(i * 0x1000 + nOffset + row + 8);
                     for (let col = 0; col < 8; col++) {
-                        const pixel = (tile_lsb & 0x01) + (tile_msb & 0x01);
+                        const pixel = ((tile_msb & 0x01) << 1) | (tile_lsb & 0x01);
                         tile_lsb >>= 1; tile_msb >>= 1;
 
                         this.sprPatternTable[i].setPixel(nTileX * 8 + (7 - col), nTileY * 8 + row, this.getColorFromPaletteRam(palette, pixel));

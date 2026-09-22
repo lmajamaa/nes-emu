@@ -83,12 +83,12 @@ class Cartridge {
     }
 
     // Communication with PPU bus
-    ppuRead(addr, data) {
+    ppuRead(addr, object) {
         let mapped_addr = 0;
         let mapper_obj = { mapped_addr };
-        if (this.pMapper.ppuMapWrite(addr, mapper_obj)) {
+        if (this.pMapper.ppuMapRead(addr, mapper_obj)) {
             mapped_addr = mapper_obj.mapped_addr;
-            data = this.vCHRMemory[mapped_addr];
+            object.data = this.vCHRMemory[mapped_addr];
             return true;
         } else {
             return false;

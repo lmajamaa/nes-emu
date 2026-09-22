@@ -11,7 +11,9 @@ export class Sprite {
         this.width = width;
         this.height = height;
 
-        this.content = new Array(width + 1).fill(Array(height + 1).fill(new Pixel(0, 0, 0)));
+        // Every column needs its own array, fill() would share a single one
+        const black = new Pixel(0, 0, 0);
+        this.content = Array.from({ length: width + 1 }, () => Array(height + 1).fill(black));
     }
 
     getPixel(x, y) {

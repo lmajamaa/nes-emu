@@ -38,31 +38,25 @@ class Cpu {
             this.pc++;
 
             // Get starting number of cycles
+            const instruction = this.lookup(this.opcode);
+            this.cycles = instruction.cycles;
             try {
-                const instruction = this.lookup(this.opcode);
-                if (Number.isNaN(instruction.cycles)) {
-                    this.cycles = 1;
-                    throw new Error('Cycles not defined for opcode', this.opcode)
-                }
-                if (instruction.opcode === 'XXX') {
-                    console.log(instruction);
-                }
-                //console.log(instruction.opcode, instruction.addrmode);
                 const additional_cycle1 = this[instruction.addrmode]();
                 const additional_cycle2 = this[instruction.opcode]();
 
-                this.cycles += (additional_cycle1 + additional_cycle2);
+                // An extra cycle is only needed when the addressing mode crossed
+                // a page AND the instruction is one that is affected by it
+                this.cycles += (additional_cycle1 & additional_cycle2);
             } catch (e) {
-                console.log('Unable to execute opcode: ' + this.opcode, e);
+                console.log('Unable to execute opcode: ' + hex(this.opcode, 2), e);
             }
+            this.pc &= 0xFFFF;
         }
 
         if(this.cycles !== 0) this.cycles--;
     }
 
     reset() {
-        console.log('reset');
-       
         // Get address to set program counter to
         this.addr_abs = 0xFFFC;
         const lo = this.read(this.addr_abs + 0);
@@ -88,19 +82,15 @@ class Cpu {
     }
 
     irq() {
-        console.log('irq');
         if (this.i === 0) {
-            this.write(0x0100 + this.stkp, (this.pc >> 8) & 0x00FF);
-            this.stkp--;
-            this.write(0x0100 + this.stkp, this.pc & 0x00FF);
-            this.stkp--;
+            this.push((this.pc >> 8) & 0x00FF);
+            this.push(this.pc & 0x00FF);
 
             // Then push the status register to the stack
             this.b = 0;
             this.u = 1;
+            this.push(this.getFlags());
             this.i = 1;
-            this.write(0x0100 + this.stkp, this.getFlags());
-            this.stkp--;
 
             // Read new program counter location from fixed address
             this.addr_abs = 0xFFFE;
@@ -114,17 +104,13 @@ class Cpu {
     }
 
     nmi() {
-        console.log('nmi');
-        this.write(0x0100 + this.stkp, (this.pc >> 8) & 0x00FF);
-        this.stkp--;
-        this.write(0x0100 + this.stkp, this.pc & 0x00FF);
-        this.stkp--;
+        this.push((this.pc >> 8) & 0x00FF);
+        this.push(this.pc & 0x00FF);
 
         this.b = 0;
         this.u = 1;
+        this.push(this.getFlags());
         this.i = 1;
-        this.write(0x0100 + this.stkp, this.getFlags());
-        this.stkp--;
 
         this.addr_abs = 0xFFFA;
         const lo = this.read(this.addr_abs + 0);
@@ -144,14 +130,44 @@ class Cpu {
     }
 
     read(addr) {
-        return this.bus.cpuRead(addr, false);
+        return this.bus.cpuRead(addr & 0xFFFF, false);
     }
 
     write(addr, data) {
-        if(addr === 0x2000) {
-            console.log('writing to control: ', hex(data, 4));
-        }
         this.bus.cpuWrite(addr, data);
+    }
+
+    /** Push a byte to the stack, the stack pointer wraps within page 1 */
+    push(data) {
+        this.write(0x0100 + this.stkp, data);
+        this.stkp = (this.stkp - 1) & 0xFF;
+    }
+
+    /** Pop a byte off the stack */
+    pull() {
+        this.stkp = (this.stkp + 1) & 0xFF;
+        return this.read(0x0100 + this.stkp);
+    }
+
+    /** Set Zero and Negative flags based on an 8-bit value */
+    setZN(value) {
+        this.z = (value & 0xFF) === 0x00 ? 1 : 0;
+        this.n = (value & 0x80) !== 0 ? 1 : 0;
+    }
+
+    /** Shared implementation of the branch instructions */
+    branch(condition) {
+        if (condition) {
+            this.cycles++;
+            this.addr_abs = (this.pc + this.addr_rel) & 0xFFFF;
+
+            // Crossing a page takes one more cycle
+            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
+                this.cycles++;
+
+            this.pc = this.addr_abs;
+        }
+        return 0;
     }
 
     getFlags() {
@@ -246,7 +262,7 @@ class Cpu {
         this.pc++;
 
         this.addr_abs = (hi << 8) | lo;
-        this.addr_abs += this.x;
+        this.addr_abs = (this.addr_abs + this.x) & 0xFFFF;
 
         if ((this.addr_abs & 0xFF00) !== (hi << 8))
             return 1;
@@ -262,7 +278,7 @@ class Cpu {
         this.pc++;
 
         this.addr_abs = (hi << 8) | lo;
-        this.addr_abs += this.y;
+        this.addr_abs = (this.addr_abs + this.y) & 0xFFFF;
 
         if ((this.addr_abs & 0xFF00) !== (hi << 8))
             return 1;
@@ -309,7 +325,7 @@ class Cpu {
         const hi = this.read((t + 1) & 0x00FF);
 
         this.addr_abs = (hi << 8) | lo;
-        this.addr_abs += this.y;
+        this.addr_abs = (this.addr_abs + this.y) & 0xFFFF;
 
         if ((this.addr_abs & 0xFF00) !== (hi << 8))
             return 1;
@@ -337,18 +353,15 @@ class Cpu {
     AND() {
         this.fetch();
         this.a = this.a & this.fetched;
-
-        this.z = this.a === 0x00 ? 1 : 0;
-        this.n = (this.a & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.a);
         return 1;
     }
     /** Instruction: Arithmetic Shift Left */
     ASL() {
         this.fetch();
         const temp = this.fetched << 1;
-        this.c = temp & 0xFF00 > 0 ? 1 : 0;
-        this.z = temp & 0x00FF == 0x00 ? 1 : 0;
-        this.n = (temp & 0x80) !== 0 ? 1 : 0;
+        this.c = (temp & 0xFF00) !== 0 ? 1 : 0;
+        this.setZN(temp);
         if (this.lookup(this.opcode).addrmode === 'IMP') {
             this.a = temp & 0x00FF;
         } else {
@@ -358,133 +371,59 @@ class Cpu {
     }
     /** Instruction: Branch if Carry Clear */
     BCC() {
-        if (this.c === 0) { // Carry bit
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.c === 0);
     }
     /** Instruction: Branch if Carry Set */
     BCS() {
-        if (this.c === 1) { // Carry bit
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.c === 1);
     }
     /** Instruction: Branch if Equal */
     BEQ() {
-        if (this.z === 1) { // Zero
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.z === 1);
     }
+    /** Instruction: Test Bits in Memory with Accumulator */
     BIT() {
         this.fetch();
-        const temp = this.a & this.fetched;
-        this.z = temp & 0x00FF == 0x00 ? 1 : 0;
-        this.n = temp & (1 << 7);
-        this.v = temp & (1 << 6);
+        // Z comes from A & M, but N and V are copied straight from memory
+        this.z = (this.a & this.fetched) === 0x00 ? 1 : 0;
+        this.n = (this.fetched >> 7) & 1;
+        this.v = (this.fetched >> 6) & 1;
         return 0;
     }
     /** Instruction: Branch if Negative */
     BMI() {
-        if (this.n === 1) { // Negative
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.n === 1);
     }
     /** Instruction: Branch if Not Equal */
     BNE() {
-        if (this.z === 0) {
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.z === 0);
     }
     /** Instruction: Branch if Positive */
     BPL() {
-        if (this.n === 0) {
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.n === 0);
     }
     /** Break */
     BRK() {
+        // BRK has a padding byte after the opcode, skip it
         this.pc++;
 
-        this.i = 1;
-        this.write(0x0100 + this.stkp, (this.pc >> 8) & 0x00FF);
-        this.stkp--;
-        this.write(0x0100 + this.stkp, this.pc & 0x00FF);
-        this.stkp--;
+        this.push((this.pc >> 8) & 0x00FF);
+        this.push(this.pc & 0x00FF);
 
-        this.b = 1;
-        this.write(0x0100 + this.stkp, this.getFlags());
-        this.stkp--;
-        this.b = 0;
+        // Status is pushed with the B flag set
+        this.push(this.getFlags() | Flags6502.B | Flags6502.U);
+        this.i = 1;
 
         this.pc = this.read(0xFFFE) | (this.read(0xFFFF) << 8);
         return 0;
     }
     /** Instruction: Branch if Overflow Clear */
     BVC() {
-        if (this.v === 0) {
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.v === 0);
     }
     /** Instruction: Branch if Overflow Set */
     BVS() {
-        if (this.v === 1) {
-            this.cycles++;
-            this.addr_abs = this.pc + this.addr_rel;
-
-            if ((this.addr_abs & 0xFF00) !== (this.pc & 0xFF00))
-                this.cycles++;
-
-            this.pc = this.addr_abs;
-        }
-        return 0;
+        return this.branch(this.v === 1);
     }
     /** Instruction: Clear Carry Flag */
     CLC() {
@@ -506,86 +445,72 @@ class Cpu {
         this.v = 0;
         return 0;
     }
+    /** Shared implementation of CMP, CPX and CPY */
+    compare(register) {
+        this.fetch();
+        this.c = register >= this.fetched ? 1 : 0;
+        this.setZN(register - this.fetched);
+    }
     /** Instruction: Compare Accumulator */
     CMP() {
-        this.fetch();
-        const temp = this.a - this.fetched;
-        this.c = this.a >= this.fetched ? 1 : 0;
-        this.z = (temp & 0x00FF) === 0x0000 ? 1 : 0;
-        this.n = temp & 0x0080;
+        this.compare(this.a);
         return 1;
     }
     /** Compare X Register */
     CPX() {
-        this.fetch();
-        const temp = this.x - this.fetched;
-        this.c = this.x >= this.fetched ? 1 : 0;
-        this.z = (temp & 0x00FF) === 0x0000 ? 1 : 0;
-        this.n = temp & 0x0080;
+        this.compare(this.x);
         return 0;
     }
     /** Compare Y Register */
     CPY() {
-        this.fetch();
-        const temp = this.y - this.fetched;
-        this.c = this.y >= this.fetched ? 1 : 0;
-        this.z = (temp & 0x00FF) === 0x0000 ? 1 : 0;
-        this.n = temp & 0x0080;
+        this.compare(this.y);
         return 0;
     }
     /** Instruction: Decrement Value at Memory Location */
     DEC() {
         this.fetch();
-        const temp = this.fetched - 1;
-        this.write(this.addr_abs, temp & 0x00FF);
-        this.z = (temp & 0x00FF) === 0x0000 ? 1 : 0;
-        this.n = temp & 0x0080;
+        const temp = (this.fetched - 1) & 0x00FF;
+        this.write(this.addr_abs, temp);
+        this.setZN(temp);
         return 0;
     }
     /** Decrement X Register */
     DEX() {
         this.x = (this.x - 1) & 0xFF;
-        this.z = this.x === 0 ? 1 : 0;
-        this.n = (this.x & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.x);
         return 0;
     }
     /** Decrement Y Register */
     DEY() {
         this.y = (this.y - 1) & 0xFF;
-        this.z = this.y === 0 ? 1 : 0;
-        this.n = (this.y & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.y);
         return 0;
     }
     /** Bitwise Logic XOR */
     EOR() {
         this.fetch();
         this.a = this.a ^ this.fetched;
-        this.z = this.a === 0x00 ? 1 : 0;
-        this.n = (this.a & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.a);
         return 1;
-
     }
     /** Instruction: Increment Value at Memory Location */
     INC() {
         this.fetch();
-        const temp = this.fetched + 1;
-        this.write(this.addr_abs, temp & 0x00FF);
-        this.z = (temp & 0x00FF) === 0x0000 ? 1 : 0;
-        this.n = temp & 0x0080;
+        const temp = (this.fetched + 1) & 0x00FF;
+        this.write(this.addr_abs, temp);
+        this.setZN(temp);
         return 0;
     }
     /** Instruction: Increment X Register */
     INX() {
-        this.x++;
-        this.z = this.x === 0 ? 1 : 0;
-        this.n = (this.x & 0x80) !== 0 ? 1 : 0;
+        this.x = (this.x + 1) & 0xFF;
+        this.setZN(this.x);
         return 0;
     }
     /** Instruction: Increment Y Register */
     INY() {
-        this.y++;
-        this.z = this.y === 0 ? 1 : 0;
-        this.n = (this.y & 0x80) !== 0 ? 1 : 0;
+        this.y = (this.y + 1) & 0xFF;
+        this.setZN(this.y);
         return 0;
     }
     /** Instruction: Jump To Location */
@@ -595,48 +520,46 @@ class Cpu {
     }
     /** Instruction: Jump To Sub-Routine */
     JSR() {
-        console.log('JSR', hex(this.pc, 4));
+        // The return address pushed is the last byte of the JSR instruction
         this.pc--;
 
-        this.write(0x0100 + this.stkp, (this.pc >> 8) & 0x00FF);
-        this.stkp--;
-        this.write(0x0100 + this.stkp, this.pc & 0x00FF);
-        this.stkp--;
+        this.push((this.pc >> 8) & 0x00FF);
+        this.push(this.pc & 0x00FF);
+
+        // The 6502 reads the high byte of the target only after the pushes,
+        // which matters if the push overwrote it (code running in the stack page)
+        this.addr_abs = (this.read(this.pc) << 8) | (this.addr_abs & 0x00FF);
 
         this.pc = this.addr_abs;
-        console.log('JSR', hex(this.pc, 4));
         return 0;
     }
     /** Instruction: Load The Accumulator */
     LDA() {
         this.fetch();
         this.a = this.fetched;
-        this.z = this.a === 0x00 ? 1 : 0;
-        this.n = (this.a & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.a);
         return 1;
     }
     /** Instruction: Load The X Register */
     LDX() {
         this.fetch();
         this.x = this.fetched;
-        this.z = this.x === 0x00 ? 1 : 0;
-        this.n = (this.x & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.x);
         return 1;
     }
     /** Instruction: Load The Y Register */
     LDY() {
         this.fetch();
         this.y = this.fetched;
-        this.z = this.y === 0x00 ? 1 : 0;
-        this.n = (this.y & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.y);
         return 1;
     }
+    /** Instruction: Logical Shift Right */
     LSR() {
         this.fetch();
         this.c = this.fetched & 0x0001;
         const temp = this.fetched >> 1;
-        this.z = (temp & 0x00FF) === 0x0000 ? 1 : 0;
-        this.n = temp & 0x0080;
+        this.setZN(temp);
         if (this.lookup(this.opcode).addrmode === 'IMP') {
             this.a = temp & 0x00FF;
         } else {
@@ -666,69 +589,61 @@ class Cpu {
     ORA() {
         this.fetch();
         this.a = this.a | this.fetched;
-        this.z = this.a === 0x00 ? 1 : 0;
+        this.setZN(this.a);
+        return 1;
     }
     /**  Instruction: Add with Carry In */
     ADC() {
         this.fetch();
-        const temp = this.a + this.fetched + this.c;
-        this.c = temp > 255 ? 1 : 0;
-        this.z = (temp & 0x00FF == 0) ? 1 : 0;
-        this.n = (temp & 0x80) !== 0 ? 1 : 0;
-        this.v = ~(this.a ^ this.fetched) & (this.a ^ temp) & 0x0080;
-        this.a = temp & 0x00FF;
-
-        return 1;
+        return this.addWithCarry(this.fetched);
     }
     /** Instruction: Subtraction with Borrow In */
     SBC() {
         this.fetch();
-        const value = this.fetched ^ 0x00FF;
-
+        // A - M - (1 - C) is the same as A + ~M + C
+        return this.addWithCarry(this.fetched ^ 0x00FF);
+    }
+    /** Shared implementation of ADC and SBC (the NES CPU has no decimal mode) */
+    addWithCarry(value) {
         const temp = this.a + value + this.c;
-        this.c = temp > 255 ? 1 : 0;
-        this.z = (temp & 0x00FF == 0) ? 1 : 0;
-        this.n = (temp & 0x80) !== 0 ? 1 : 0;
-        this.v = ~(this.a ^ this.fetched) & (this.a ^ temp) & 0x0080;
+        this.c = temp > 0xFF ? 1 : 0;
+        // Overflow when both operands have the same sign and the result's sign differs
+        this.v = (~(this.a ^ value) & (this.a ^ temp) & 0x0080) !== 0 ? 1 : 0;
         this.a = temp & 0x00FF;
-
+        this.setZN(this.a);
         return 1;
     }
     /** Instruction: Push Accumulator to Stack */
     PHA() {
-        this.write(0x0100 + this.stkp, this.a);
-        this.stkp--;
+        this.push(this.a);
         return 0;
     }
     /** Instruction: Push Status Register to Stack */
     PHP() {
-        this.write(0x0100 + this.stkp, this.getFlags() | Flags6502.B | Flags6502.U);
-        this.b = 0;
-        this.u = 0;
-        this.stkp--;
+        // Status is pushed with the B flag set
+        this.push(this.getFlags() | Flags6502.B | Flags6502.U);
         return 0;
     }
     /** Instruction: Pop Accumulator off Stack */
     PLA() {
-        this.stkp++;
-        this.a = this.read(0x0100 + this.stkp);
-        this.z = this.a === 0x00 ? 1 : 0;
-        this.n = (this.a & 0x80) !== 0 ? 1 : 0;
+        this.a = this.pull();
+        this.setZN(this.a);
         return 0;
     }
     /** Instruction: Pop Status Register off Stack */
     PLP() {
-        this.stkp++;
-        this.setFlags(this.read(0x0100 + this.stkp));
+        this.setFlags(this.pull());
+        // B only exists on the stack and U always reads as set
+        this.b = 0;
         this.u = 1;
         return 0;
     }
+    /** Instruction: Rotate Left */
     ROL() {
         this.fetch();
         const temp = (this.fetched << 1) | this.c;
-        this.c = temp & 0xFF00 ? 1 : 0;
-        this.z = (temp & 0x00FF) === 0x0000 ? 1 : 0;
-        this.n = temp & 0x0080;
+        this.c = (temp & 0xFF00) !== 0 ? 1 : 0;
+        this.setZN(temp);
         if (this.lookup(this.opcode).addrmode === 'IMP') {
             this.a = temp & 0x00FF;
         } else {
@@ -736,12 +651,12 @@ class Cpu {
         }
         return 0;
     }
+    /** Instruction: Rotate Right */
     ROR() {
         this.fetch();
         const temp = (this.c << 7) | (this.fetched >> 1);
         this.c = this.fetched & 0x01;
-        this.z = (temp & 0x00FF) === 0x00 ? 1 : 0;
-        this.n = temp & 0x0080;
+        this.setZN(temp);
         if (this.lookup(this.opcode).addrmode === 'IMP') {
             this.a = temp & 0x00FF;
         } else {
@@ -749,25 +664,21 @@ class Cpu {
         }
         return 0;
     }
+    /** Instruction: Return from Interrupt */
     RTI() {
-        this.stkp++;
-        this.setFlags(this.read(0x0100 + this.stkp));
-        let status = this.getFlags()
-        status &= ~Flags6502.B;
-        status &= ~Flags6502.U;
-        this.setFlags(status);
+        this.setFlags(this.pull());
+        // B only exists on the stack and U always reads as set
+        this.b = 0;
+        this.u = 1;
 
-        this.stkp++;
-        this.setFlags(this.read(0x0100 + this.stkp));
-        this.stkp++;
-        this.pc |= this.read(0x0100 + this.stkp) << 8;
+        this.pc = this.pull();
+        this.pc |= this.pull() << 8;
         return 0;
     }
+    /** Instruction: Return from Sub-Routine */
     RTS() {
-        this.stkp++;
-        this.pc = this.read(0x0100 + this.stkp);
-        this.stkp++;
-        this.pc |= this.read(0x0100 + this.stkp) << 8;
+        this.pc = this.pull();
+        this.pc |= this.pull() << 8;
 
         this.pc++;
         return 0;
@@ -805,29 +716,25 @@ class Cpu {
     /** Instruction: Transfer Accumulator to X Register */
     TAX() {
         this.x = this.a;
-        this.z = this.x === 0x00 ? 1 : 0;
-        this.n = (this.x & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.x);
         return 0;
     }
     /** Instruction: Transfer Accumulator to Y Register */
     TAY() {
         this.y = this.a;
-        this.z = this.y === 0x00 ? 1 : 0;
-        this.n = (this.y & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.y);
         return 0;
     }
     /** Instruction: Transfer Stack Pointer to X Register */
     TSX() {
         this.x = this.stkp;
-        this.z = this.x === 0x00 ? 1 : 0;
-        this.n = (this.x & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.x);
         return 0;
     }
     /**  Instruction: Transfer X Register to Accumulator */
     TXA() {
         this.a = this.x;
-        this.z = this.a === 0x00 ? 1 : 0;
-        this.n = (this.a & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.a);
         return 0;
     }
     /** Instruction: Transfer X Register to Stack Pointer */
@@ -838,8 +745,7 @@ class Cpu {
     /** Instruction: Transfer Y Register to Accumulator */
     TYA() {
         this.a = this.y;
-        this.z = this.a === 0x00 ? 1 : 0;
-        this.n = (this.a & 0x80) !== 0 ? 1 : 0;
+        this.setZN(this.a);
         return 0;
     }
     /** Illegal opcodes */

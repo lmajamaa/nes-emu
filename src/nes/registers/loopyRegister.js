@@ -33,23 +33,12 @@ class LoopyRegister {
         return value;
     }
     set reg(value) {
-        this.coarse_x |= (((value >> 0) & 1) << 0);
-        this.coarse_x |= (((value >> 1) & 1) << 1);
-        this.coarse_x |= (((value >> 2) & 1) << 2);
-        this.coarse_x |= (((value >> 3) & 1) << 3);
-        this.coarse_x |= (((value >> 4) & 1) << 4);
-
-        this.coarse_y |= (((value >> 5) & 1) << 0);
-        this.coarse_y |= (((value >> 6) & 1) << 1);
-        this.coarse_y |= (((value >> 7) & 1) << 2);
-        this.coarse_y |= (((value >> 8) & 1) << 3);
-        this.coarse_y |= (((value >> 9) & 1) << 4);
+        this.coarse_x = (value >> 0) & 0x1F;
+        this.coarse_y = (value >> 5) & 0x1F;
 
         this.nametable_x = (value >> 10) & 1;
         this.nametable_y = (value >> 11) & 1;
-        this.fine_y |= (((value >> 12) & 1) << 0);
-        this.fine_y |= (((value >> 13) & 1) << 1);
-        this.fine_y |= (((value >> 14) & 1) << 2);
+        this.fine_y = (value >> 12) & 0x07;
         this.unused = (value >> 15) & 1;
     }
 }

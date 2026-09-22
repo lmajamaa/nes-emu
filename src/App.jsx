@@ -147,7 +147,7 @@ const App = () => {
     }
 
     const patternTable0 = nes.cartridge ? nes.ppu.getPatternTable(0, selectedPalette) : null;
-    const patternTable1 = nes.cartridge ? nes.ppu.getPatternTable(0, selectedPalette) : null;
+    const patternTable1 = nes.cartridge ? nes.ppu.getPatternTable(1, selectedPalette) : null;
 
     return (
         <div className="gameArea">
@@ -156,7 +156,7 @@ const App = () => {
                 <div className="container">
                     <div className="column">
                         <canvas id="emulationCanvas" ref={canvasRef} width="256" height="240" />
-                        <code className="instructions">SPACE = Step Instruction    R = RESET    I = IRQ    N = NMI</code>
+                        <code className="instructions">SPACE = Run/Pause    C = Step Instruction    F = Step Frame    P = Palette    R = RESET    I = IRQ    N = NMI</code>
                         <Ram nes={nes} x={2} y={2} nAddr={0x0000} nRows={16} nColumns={16} />
                         <Ram nes={nes} x={2} y={182} nAddr={0x8000} nRows={16} nColumns={16} />
                     </div>
