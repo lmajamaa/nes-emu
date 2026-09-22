@@ -9,6 +9,7 @@ import { hex } from '../src/utils';
 export const NESTEST_ROM = new URL('./data/nestest/nestest.nes', import.meta.url);
 export const NESTEST_LOG = new URL('./data/nestest/nestest.log', import.meta.url);
 export const SINGLE_STEP_TESTS = new URL('./data/6502/official.json.gz', import.meta.url);
+export const BLARGG_APU_DIR = new URL('./data/blargg-apu/', import.meta.url);
 
 export interface SingleStepState {
     pc: number;

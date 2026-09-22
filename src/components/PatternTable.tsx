@@ -21,7 +21,7 @@ const PatternTable = ({ patternTable }: { patternTable: Sprite }) => {
             }
         }
         context.putImageData(canvasData, 0, 0);
-    }, [patternTable]);
+    }); // The sprite is updated in place, so redraw on every render
 
     return (
         <canvas id="patternCanvas" ref={canvasRef} width={patternTable.width} height={patternTable.height} />

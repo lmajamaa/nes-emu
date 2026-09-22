@@ -11,26 +11,38 @@ export interface ReadResult {
     data: number;
 }
 
+export const SUPPORTED_MAPPERS: readonly number[] = [0];
+
 class Cartridge {
     readonly mirror: Mirror;
+    readonly mapperId: number;
     private readonly nPRGBanks: number = 0;
     private readonly nCHRBanks: number = 0;
     private readonly vPRGMemory: Uint8Array = new Uint8Array(0);
     private readonly vCHRMemory: Uint8Array = new Uint8Array(0);
+    // Most boards have no PRG RAM at $6000-$7FFF, but emulators commonly provide it (test ROMs rely on it)
+    private readonly prgRam = new Uint8Array(0x2000);
     private readonly pMapper: Mapper;
 
     constructor(data: ArrayBuffer | Uint8Array) {
         let index = 0;
         const byteArray = new Uint8Array(data);
         const header = new iNESHeader(byteArray.subarray(index, headerSize));
+        if (byteArray.length < headerSize || header.nameDecoded !== 'NES\x1A') {
+            throw new Error('Not an iNES ROM file');
+        }
         index += headerSize;
         // Skip training data
         if (header.mapper1 & 0x04) {
             index += 512;
         }
+        if (byteArray.length < index + header.prg_rom_chunks * prgBankSize + header.chr_rom_chunks * chrBankSize) {
+            throw new Error('ROM file is truncated');
+        }
 
         // Determine mapper ID
         const nMapperID = ((header.mapper2 >> 4) << 4) | (header.mapper1 >> 4);
+        this.mapperId = nMapperID;
         this.mirror = (header.mapper1 & 0x01) ? MIRROR.VERTICAL : MIRROR.HORIZONTAL;
 
         // Discover file format
@@ -64,6 +76,10 @@ class Cartridge {
 
     // Communication with main bus
     cpuRead(addr: number, object: ReadResult): boolean {
+        if (addr >= 0x6000 && addr <= 0x7FFF) {
+            object.data = this.prgRam[addr & 0x1FFF];
+            return true;
+        }
         const mapper_obj = { mapped_addr: 0 };
         if (this.pMapper.cpuMapRead(addr, mapper_obj)) {
             object.data = this.vPRGMemory[mapper_obj.mapped_addr];
@@ -73,6 +89,10 @@ class Cartridge {
     }
 
     cpuWrite(addr: number, data: number): boolean {
+        if (addr >= 0x6000 && addr <= 0x7FFF) {
+            this.prgRam[addr & 0x1FFF] = data;
+            return true;
+        }
         const mapper_obj = { mapped_addr: 0 };
         if (this.pMapper.cpuMapWrite(addr, mapper_obj)) {
             this.vPRGMemory[mapper_obj.mapped_addr] = data;

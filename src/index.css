@@ -70,3 +70,40 @@ h4 {
   margin-top: 12px;
   margin-left: 24px;
 }
+.toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.button {
+  font: inherit;
+  color: inherit;
+  background-color: #3D0A2C;
+  border: 1px solid goldenrod;
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #52123D;
+}
+
+.button:focus-within {
+  outline: 2px solid goldenrod;
+  outline-offset: 2px;
+}
+
+.message {
+  margin: 0 0 16px;
+}
+
+.error {
+  color: hotpink;
+}
+
+.codeArea code, .ramArea code, .cpuArea code {
+  display: block;
+  white-space: pre;
+}

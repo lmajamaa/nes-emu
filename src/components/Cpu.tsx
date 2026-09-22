@@ -1,6 +1,8 @@
 import { hex } from '../utils';
 import type { CpuState } from '../nes/cpu';
 
+const decimal = (value: number) => String(value).padStart(3, ' ');
+
 const Cpu = ({ cpu }: { cpu: CpuState }) => (
     <div className="cpuArea">
         <h4>
@@ -15,7 +17,7 @@ const Cpu = ({ cpu }: { cpu: CpuState }) => (
             <span className={cpu.c === 1 ? 'active' : 'inActive'}>C</span>
         </h4>
         <code>
-            {`PC: $${hex(cpu.pc, 4)} A: $${hex(cpu.a, 2)} [${cpu.a}] X: $${hex(cpu.x, 2)} [${cpu.x}] Y: $${hex(cpu.y, 2)} [${cpu.y}] Stack P: $${hex(cpu.stkp, 4)}`}
+            {`PC: $${hex(cpu.pc, 4)} A: $${hex(cpu.a, 2)} [${decimal(cpu.a)}] X: ${hex(cpu.x, 2)} [${decimal(cpu.x)}] Y: ${hex(cpu.y, 2)} [${decimal(cpu.y)}] Stack P: $${hex(cpu.stkp, 4)}`}
         </code>
     </div>
 );

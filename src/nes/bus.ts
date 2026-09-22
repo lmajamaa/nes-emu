@@ -1,10 +1,12 @@
 import Cpu, { type CpuBus } from "./cpu";
 import Ppu from "./ppu";
+import Apu from "./apu";
 import type Cartridge from "./cartridge";
 
 class Bus implements CpuBus {
     readonly cpu: Cpu;
     readonly ppu: Ppu;
+    readonly apu: Apu;
     readonly cpuRam: number[];
     cartridge: Cartridge | null = null;
 
@@ -24,18 +26,23 @@ class Bus implements CpuBus {
     constructor() {
         this.cpu = new Cpu(this);
         this.ppu = new Ppu();
+        this.apu = new Apu(addr => this.cpuRead(addr));
         this.cpuRam = Array(2048).fill(0x00);
     }
 
+    // Like powering on with a new cartridge, so RAM and controllers start out clear
     insertCartridge(cartridge: Cartridge): void {
         this.cartridge = cartridge;
         this.ppu.connectCartridge(cartridge);
+        this.cpuRam.fill(0x00);
+        this.controller.fill(0x00);
     }
 
     reset(): void {
         this.cartridge?.reset();
         this.cpu.reset();
         this.ppu.reset();
+        this.apu.reset();
         this.nSystemClockCounter = 0;
         this.dma_page = 0x00;
         this.dma_addr = 0x00;
@@ -48,9 +55,12 @@ class Bus implements CpuBus {
         this.ppu.clock();
 
         if (this.nSystemClockCounter % 3 === 0) {
+            this.apu.clock();
             if (this.dma_transfer) {
                 this.clockDma();
             } else {
+                // IRQ is level triggered and only taken between instructions
+                if (this.apu.irq && this.cpu.complete()) this.cpu.irq();
                 this.cpu.clock();
             }
         }
@@ -97,6 +107,8 @@ class Bus implements CpuBus {
             data = this.cpuRam[addr & 0x07FF];
         } else if (addr >= 0x2000 && addr <= 0x3FFF) {
             data = this.ppu.cpuRead(addr & 0x0007, bReadOnly);
+        } else if (addr === 0x4015) {
+            data = this.apu.cpuRead(addr, bReadOnly);
         } else if (addr === 0x4016 || addr === 0x4017) {
             const i = addr & 0x0001;
             if (this.controller_strobe) this.latchControllers();
@@ -116,6 +128,8 @@ class Bus implements CpuBus {
             this.cpuRam[addr & 0x07FF] = data;
         } else if (addr >= 0x2000 && addr <= 0x3FFF) {
             this.ppu.cpuWrite(addr & 0x0007, data);
+        } else if ((addr >= 0x4000 && addr <= 0x4013) || addr === 0x4015 || addr === 0x4017) {
+            this.apu.cpuWrite(addr, data);
         } else if (addr === 0x4014) {
             this.dma_page = data;
             this.dma_addr = 0x00;

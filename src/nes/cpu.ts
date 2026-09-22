@@ -88,7 +88,7 @@ class Cpu {
         this.x = 0;
         this.y = 0;
         this.stkp = 0xFD;
-        this.setFlags(0x00 | Flags6502.U);
+        this.setFlags(Flags6502.U | Flags6502.I);
 
         // Clear internal helper variables
         this.addr_rel = 0x0000;

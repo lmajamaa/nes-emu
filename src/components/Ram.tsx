@@ -18,7 +18,7 @@ const Ram = ({ nes, nAddr, nRows, nColumns }: RamProps) => {
             sOffset += hex(nes.cpuRead(nAddr, true), 2) + ' ';
             nAddr += 1;
         }
-        items.push(<code key={sOffset}>{sOffset}<br /></code>)
+        items.push(<code key={row}>{sOffset}</code>)
     }
 
     return (
