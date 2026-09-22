@@ -477,6 +477,17 @@ class Ppu {
                 break;
         }
     }
+    // The PPU has room for two of the four nametables, the cartridge decides how they are mirrored
+    private nametable(addr: number): number[] {
+        const table = (addr >> 10) & 0x03;
+        switch (this.cartridge?.mirror) {
+            case MIRROR.VERTICAL: return this.tblName[table & 0x01];
+            case MIRROR.HORIZONTAL: return this.tblName[table >> 1];
+            case MIRROR.ONESCREEN_HI: return this.tblName[1];
+            default: return this.tblName[0];
+        }
+    }
+
     // Communication with PPU bus
     ppuRead(addr: number, _readOnly = false): number {
         let data = 0x00;
@@ -489,36 +500,7 @@ class Ppu {
         } else if (addr >= 0x0000 && addr <= 0x1FFF) {
             data = this.tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF];
         } else if (addr >= 0x2000 && addr <= 0x3EFF) {
-            addr &= 0x0FFF;
-            if (this.cartridge.mirror === MIRROR.VERTICAL) {
-                // Vertical
-                if (addr >= 0x0000 && addr <= 0x03FF) {
-                    data = this.tblName[0][addr & 0x03FF];
-                }
-                if (addr >= 0x0400 && addr <= 0x07FF) {
-                    data = this.tblName[1][addr & 0x03FF];
-                }
-                if (addr >= 0x00800 && addr <= 0x0BFF) {
-                    data = this.tblName[0][addr & 0x03FF];
-                }
-                if (addr >= 0x0C00 && addr <= 0x0FFF) {
-                    data = this.tblName[1][addr & 0x03FF];
-                }
-
-            } else if (this.cartridge.mirror === MIRROR.HORIZONTAL) {
-                if (addr >= 0x0000 && addr <= 0x03FF) {
-                    data = this.tblName[0][addr & 0x03FF];
-                }
-                if (addr >= 0x0400 && addr <= 0x07FF) {
-                    data = this.tblName[0][addr & 0x03FF];
-                }
-                if (addr >= 0x00800 && addr <= 0x0BFF) {
-                    data = this.tblName[1][addr & 0x03FF];
-                }
-                if (addr >= 0x0C00 && addr <= 0x0FFF) {
-                    data = this.tblName[1][addr & 0x03FF];
-                }
-            }
+            data = this.nametable(addr)[addr & 0x03FF];
         } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
             addr &= 0x001F;
             if (addr === 0x0010) addr = 0x0000;
@@ -541,44 +523,15 @@ class Ppu {
         } else if (addr >= 0x0000 && addr <= 0x1FFF) {
             this.tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF] = data;
         } else if (addr >= 0x2000 && addr <= 0x3EFF) {
-            addr &= 0x0FFF;
-            if (this.cartridge.mirror === MIRROR.VERTICAL) {
-                // Vertical
-                if (addr >= 0x0000 && addr <= 0x03FF) {
-                    this.tblName[0][addr & 0x03FF] = data;
-                }
-                if (addr >= 0x0400 && addr <= 0x07FF) {
-                    this.tblName[1][addr & 0x03FF] = data;
-                }
-                if (addr >= 0x00800 && addr <= 0x0BFF) {
-                    this.tblName[0][addr & 0x03FF] = data;
-                }
-                if (addr >= 0x0C00 && addr <= 0x0FFF) {
-                    this.tblName[1][addr & 0x03FF] = data;
-                }
-
-            } else if (this.cartridge.mirror === MIRROR.HORIZONTAL) {
-                if (addr >= 0x0000 && addr <= 0x03FF) {
-                    this.tblName[0][addr & 0x03FF] = data;
-                }
-                if (addr >= 0x0400 && addr <= 0x07FF) {
-                    this.tblName[0][addr & 0x03FF] = data;
-                }
-                if (addr >= 0x00800 && addr <= 0x0BFF) {
-                    this.tblName[1][addr & 0x03FF] = data;
-                }
-                if (addr >= 0x0C00 && addr <= 0x0FFF) {
-                    this.tblName[1][addr & 0x03FF] = data;
-                }
-            }
+            this.nametable(addr)[addr & 0x03FF] = data;
         } else if (addr >= 0x3F00 && addr <= 0x3FFF) {
             addr &= 0x001F;
             if (addr === 0x0010) addr = 0x0000;
             if (addr === 0x0014) addr = 0x0004;
             if (addr === 0x0018) addr = 0x0008;
             if (addr === 0x001C) addr = 0x000C;
-            //console.log('writing to palette', hex(addr,4), hex(data, 2));
-            this.tblPalette[addr] = data;
+            // Palette RAM is only 6 bits wide, games rely on e.g. $FF being stored as $3F (black)
+            this.tblPalette[addr] = data & 0x3F;
         }
     }
 

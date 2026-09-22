@@ -1,6 +1,7 @@
 import iNESHeader from './iNESHeader';
 import type Mapper from './mappers/mapper';
 import Mapper_000 from './mappers/mapper_000';
+import Mapper_001 from './mappers/mapper_001';
 import { MIRROR, type Mirror } from './constants';
 
 const headerSize = 16;
@@ -11,11 +12,11 @@ export interface ReadResult {
     data: number;
 }
 
-export const SUPPORTED_MAPPERS: readonly number[] = [0];
+export const SUPPORTED_MAPPERS: readonly number[] = [0, 1];
 
 class Cartridge {
-    readonly mirror: Mirror;
     readonly mapperId: number;
+    private readonly hardwiredMirror: Mirror;
     private readonly nPRGBanks: number = 0;
     private readonly nCHRBanks: number = 0;
     private readonly vPRGMemory: Uint8Array = new Uint8Array(0);
@@ -43,7 +44,7 @@ class Cartridge {
         // Determine mapper ID
         const nMapperID = ((header.mapper2 >> 4) << 4) | (header.mapper1 >> 4);
         this.mapperId = nMapperID;
-        this.mirror = (header.mapper1 & 0x01) ? MIRROR.VERTICAL : MIRROR.HORIZONTAL;
+        this.hardwiredMirror = (header.mapper1 & 0x01) ? MIRROR.VERTICAL : MIRROR.HORIZONTAL;
 
         // Discover file format
         const nFileType: number = 1;
@@ -56,8 +57,11 @@ class Cartridge {
             index += this.vPRGMemory.length;
 
             this.nCHRBanks = header.chr_rom_chunks;
-            this.vCHRMemory = byteArray.subarray(index, index + this.nCHRBanks * chrBankSize);
-            index += this.vCHRMemory.length;
+            // Without CHR ROM the board has 8KB of CHR RAM
+            this.vCHRMemory = this.nCHRBanks === 0
+                ? new Uint8Array(chrBankSize)
+                : byteArray.subarray(index, index + this.nCHRBanks * chrBankSize);
+            index += this.nCHRBanks * chrBankSize;
         } else if (nFileType === 2) {
             console.log('Not implemented yet');
         }
@@ -66,6 +70,9 @@ class Cartridge {
         switch (nMapperID) {
             case 0:
                 this.pMapper = new Mapper_000(this.nPRGBanks, this.nCHRBanks);
+                break;
+            case 1:
+                this.pMapper = new Mapper_001(this.nPRGBanks, this.nCHRBanks);
                 break;
             default:
                 console.log('Mapper not implemented yet', nMapperID);
@@ -93,12 +100,7 @@ class Cartridge {
             this.prgRam[addr & 0x1FFF] = data;
             return true;
         }
-        const mapper_obj = { mapped_addr: 0 };
-        if (this.pMapper.cpuMapWrite(addr, mapper_obj)) {
-            this.vPRGMemory[mapper_obj.mapped_addr] = data;
-            return true;
-        }
-        return false;
+        return this.pMapper.cpuMapWrite(addr, data);
     }
 
     // Communication with PPU bus
@@ -118,6 +120,10 @@ class Cartridge {
             return true;
         }
         return false;
+    }
+
+    get mirror(): Mirror {
+        return this.pMapper.mirror() ?? this.hardwiredMirror;
     }
 
     reset(): void {

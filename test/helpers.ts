@@ -10,6 +10,7 @@ export const NESTEST_ROM = new URL('./data/nestest/nestest.nes', import.meta.url
 export const NESTEST_LOG = new URL('./data/nestest/nestest.log', import.meta.url);
 export const SINGLE_STEP_TESTS = new URL('./data/6502/official.json.gz', import.meta.url);
 export const BLARGG_APU_DIR = new URL('./data/blargg-apu/', import.meta.url);
+export const BLARGG_INSTR_OFFICIAL_ROM = new URL('./data/blargg-instr/official_only.nes', import.meta.url);
 
 export interface SingleStepState {
     pc: number;
@@ -67,11 +68,15 @@ export function fmt(value: unknown, length = 2): string {
     return '$' + hex(value, length);
 }
 
-// Builds an iNES image with one 16KB PRG bank and one 8KB CHR bank, using mapper 0
-export function buildRom({ prg, chr }: { prg?: Uint8Array, chr?: Uint8Array } = {}): Uint8Array {
+// Builds an iNES image, by default one 16KB PRG bank and one 8KB CHR bank using mapper 0.
+// An empty CHR means the board has CHR RAM.
+export function buildRom({ prg, chr, mapper = 0 }: { prg?: Uint8Array, chr?: Uint8Array, mapper?: number } = {}): Uint8Array {
     prg ??= new Uint8Array(0x4000);
     chr ??= new Uint8Array(0x2000);
-    const header = [0x4E, 0x45, 0x53, 0x1A, prg.length / 0x4000, chr.length / 0x2000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const header = [
+        0x4E, 0x45, 0x53, 0x1A, prg.length / 0x4000, chr.length / 0x2000,
+        (mapper & 0x0F) << 4, mapper & 0xF0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
     return Uint8Array.from([...header, ...prg, ...chr]);
 }
 

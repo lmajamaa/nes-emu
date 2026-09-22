@@ -9,12 +9,9 @@ class Mapper_000 extends Mapper {
         return false;
     }
 
-    cpuMapWrite(addr: number, object: MappedAddress): boolean {
-        if (addr >= 0x8000 && addr <= 0xFFFF) {
-            object.mapped_addr = addr & (this._nPRGBanks > 1 ? 0x7FFF : 0x3FFF);
-            return true;
-        }
-        return false;
+    // No registers, writes to ROM are ignored
+    cpuMapWrite(addr: number, _data: number): boolean {
+        return addr >= 0x8000 && addr <= 0xFFFF;
     }
 
     ppuMapRead(addr: number, object: MappedAddress): boolean {

@@ -1,3 +1,5 @@
+import type { Mirror } from '../constants';
+
 export interface MappedAddress {
     mapped_addr: number;
 }
@@ -11,11 +13,18 @@ abstract class Mapper {
         this._nCHRBanks = chrBanks;
     }
 
+    // Maps a CPU read to an offset in PRG ROM
     abstract cpuMapRead(addr: number, object: MappedAddress): boolean;
-    abstract cpuMapWrite(addr: number, object: MappedAddress): boolean;
+    // PRG ROM can't be written, writes in its range go to the mapper's registers
+    abstract cpuMapWrite(addr: number, data: number): boolean;
     abstract ppuMapRead(addr: number, object: MappedAddress): boolean;
     abstract ppuMapWrite(addr: number, object: MappedAddress): boolean;
     abstract reset(): void;
+
+    // Null when the mirroring is hardwired on the board, as set in the iNES header
+    mirror(): Mirror | null {
+        return null;
+    }
 }
 
 export default Mapper;

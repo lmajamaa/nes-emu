@@ -6,7 +6,8 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import Bus from '../src/nes/bus';
 import Cartridge from '../src/nes/cartridge';
-import { muteConsole, NESTEST_ROM as ROM } from './helpers';
+import { palScreen } from '../src/nes/graphics';
+import { buildRom, muteConsole, NESTEST_ROM as ROM } from './helpers';
 
 const FRAMES = 10;
 
@@ -58,5 +59,19 @@ describe('PPU background rendering (nestest.nes menu)', () => {
             }
         }
         expect(mismatches.slice(0, 5)).toEqual([]);
+    });
+});
+
+describe('palette RAM', () => {
+    // Games like Bubble Bobble write $FF and rely on it being stored as $3F (black)
+    test('is only 6 bits wide', () => {
+        const bus = new Bus();
+        bus.insertCartridge(new Cartridge(buildRom()));
+        bus.ppu.ppuWrite(0x3F00, 0xFF);
+        bus.ppu.ppuWrite(0x3F11, 0xC1);
+
+        expect(bus.ppu.ppuRead(0x3F00)).toBe(0x3F);
+        expect(bus.ppu.ppuRead(0x3F11)).toBe(0x01);
+        expect(bus.ppu.getColorFromPaletteRam(0, 0)).toBe(palScreen[0x3F]);
     });
 });

@@ -34,3 +34,11 @@ and its failure codes. They report through PRG RAM: a status at `$6000` (`$80` r
 `$81` reset needed, below `$80` the result where 0 is a pass) and a text message from `$6004`.
 
 Source: https://github.com/christopherpow/nes-test-roms/tree/master/apu_test/rom_singles
+
+## `blargg-instr/`
+
+`official_only.nes` from blargg's `instr_test-v5`: 16 tests of every official instruction,
+on an MMC1 (mapper 1) board with CHR RAM. It reports through `$6000` like the APU tests.
+The suite also has `all_instrs.nes`, which additionally needs the unofficial opcodes.
+
+Source: https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5
