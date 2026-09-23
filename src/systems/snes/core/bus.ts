@@ -1,0 +1,140 @@
+// The SNES memory map, as the 65816 sees it: work RAM, the B-bus ($2100-$21FF) with the PPU,
+// APU ports and the work RAM port, the CPU's I/O registers, and the cartridge. Each access
+// moves the master clock on by the speed of the memory it touches.
+
+import type { Bus65816 } from './cpu';
+import type SnesCartridge from './cartridge';
+import CpuIo from './io';
+
+const IDLE_CYCLES = 6;
+
+// Master cycles of an access, as bsnes works them out: 6 for I/O, 12 for the slow controller
+// ports, 8 for RAM and SlowROM, and 6 for FastROM in banks $80-$FF when enabled
+export function accessCycles(addr: number, romSpeed: number): number {
+    if (addr & 0x408000) return addr & 0x800000 ? romSpeed : 8;
+    if ((addr + 0x6000) & 0x4000) return 8;
+    if ((addr - 0x4000) & 0x7E00) return 6;
+    return 12;
+}
+
+class SnesBus implements Bus65816 {
+    readonly wram = new Uint8Array(0x20000);
+    readonly io = new CpuIo();
+    cartridge: SnesCartridge | null = null;
+
+    // $2140-$2143 as the CPU writes them for the APU, and as the APU writes them back
+    readonly apuInputs = new Uint8Array(4);
+    readonly apuOutputs = new Uint8Array(4);
+
+    // The last value on the data bus, returned by reads of unmapped addresses
+    openBus = 0;
+    // Master cycles run
+    cycles = 0;
+
+    // WMADD, the work RAM port address
+    private wramAddress = 0;
+
+    reset(): void {
+        this.io.reset();
+        this.wramAddress = 0;
+        this.apuInputs.fill(0);
+        this.apuOutputs.fill(0);
+    }
+
+    read(addr: number): number {
+        this.tick(accessCycles(addr, this.io.romSpeed));
+        const data = this.readRaw(addr);
+        if (data >= 0) this.openBus = data;
+        return this.openBus;
+    }
+
+    write(addr: number, data: number): void {
+        this.tick(accessCycles(addr, this.io.romSpeed));
+        this.openBus = data;
+        this.writeRaw(addr, data);
+    }
+
+    idle(): void {
+        this.tick(IDLE_CYCLES);
+    }
+
+    private tick(cycles: number): void {
+        this.cycles += this.io.advance(cycles);
+    }
+
+    // Returns -1 for open bus
+    private readRaw(addr: number): number {
+        const bank = addr >> 16;
+        const offset = addr & 0xFFFF;
+        if (bank === 0x7E || bank === 0x7F) return this.wram[addr & 0x1FFFF];
+
+        if ((bank & 0x40) === 0) {
+            // Banks $00-$3F and $80-$BF
+            if (offset < 0x2000) return this.wram[offset];
+            if (offset >= 0x2100 && offset < 0x2200) return this.readB(offset & 0xFF);
+            if (offset === 0x4016 || offset === 0x4017) return this.io.readJoypad(offset & 1, this.openBus);
+            if (offset >= 0x4200 && offset < 0x4220) return this.io.read(offset, this.openBus);
+            if (offset >= 0x2000 && offset < 0x6000) return -1;
+        }
+        return this.cartridge?.read(addr) ?? -1;
+    }
+
+    private writeRaw(addr: number, data: number): void {
+        const bank = addr >> 16;
+        const offset = addr & 0xFFFF;
+        if (bank === 0x7E || bank === 0x7F) {
+            this.wram[addr & 0x1FFFF] = data;
+            return;
+        }
+
+        if ((bank & 0x40) === 0) {
+            if (offset < 0x2000) {
+                this.wram[offset] = data;
+                return;
+            }
+            if (offset >= 0x2100 && offset < 0x2200) {
+                this.writeB(offset & 0xFF, data);
+                return;
+            }
+            if (offset === 0x4016) {
+                this.io.writeJoypadLatch(data);
+                return;
+            }
+            if (offset >= 0x4200 && offset < 0x4220) {
+                this.io.write(offset, data);
+                return;
+            }
+            if (offset >= 0x2000 && offset < 0x6000) return;
+        }
+        this.cartridge?.write(addr, data);
+    }
+
+    // B-bus, $21xx
+    private readB(addr: number): number {
+        if (addr >= 0x40 && addr < 0x80) return this.apuOutputs[addr & 3];
+        if (addr === 0x80) {
+            const data = this.wram[this.wramAddress];
+            this.wramAddress = (this.wramAddress + 1) & 0x1FFFF;
+            return data;
+        }
+        return -1;
+    }
+
+    private writeB(addr: number, data: number): void {
+        if (addr >= 0x40 && addr < 0x80) {
+            this.apuInputs[addr & 3] = data;
+            return;
+        }
+        switch (addr) {
+            case 0x80:
+                this.wram[this.wramAddress] = data;
+                this.wramAddress = (this.wramAddress + 1) & 0x1FFFF;
+                break;
+            case 0x81: this.wramAddress = (this.wramAddress & 0x1FF00) | data; break;
+            case 0x82: this.wramAddress = (this.wramAddress & 0x100FF) | (data << 8); break;
+            case 0x83: this.wramAddress = (this.wramAddress & 0x0FFFF) | ((data & 1) << 16); break;
+        }
+    }
+}
+
+export default SnesBus;

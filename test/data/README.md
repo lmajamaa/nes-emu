@@ -53,3 +53,16 @@ instruction, on an MMC1 (mapper 1) board with CHR RAM. It reports through `$6000
 APU tests.
 
 Source: https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5
+
+## `65816/`
+
+`opcodes.json.gz` is a sample of Tom Harte's 65816 SingleStepTests, 50 cases for each opcode in
+emulation (`"00.e"`) and native (`"00.n"`) mode, bundled like the 6502 sample with the cycle
+count instead of the per-cycle bus activity. MVN and MVP are left out, as their cases stop
+partway through a block move; `test/snes/cpu.blockmove.test.ts` covers them instead.
+
+Source: https://github.com/SingleStepTests/65816 (`v1`). Unlike the 6502 tests, the upstream
+repository doesn't state a license.
+
+Run `bun run fetch-65816-tests [casesPerFile]` to download the sample again (about 60 MB of
+partial requests), optionally with a different number of cases.
