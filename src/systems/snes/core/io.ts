@@ -3,6 +3,14 @@
 
 import SnesController from './controller';
 
+// The PPU's part in the frame
+export interface PpuEvents {
+    renderLine(v: number): void;
+    vblankStart(): void;
+    frameStart(): void;
+    latchCounters(): void;
+}
+
 export const MASTER_CLOCK_NTSC = 21_477_272;
 export const CYCLES_PER_LINE = 1364;
 export const LINES_PER_FRAME = 262;
@@ -24,10 +32,14 @@ class CpuIo {
     frame = 0;
     // Set when vblank starts, for the emulation loop
     frameComplete = false;
-    // 239 lines of picture instead of 224, set by the PPU
+    // 239 lines of picture instead of 224, and interlace, set by the PPU
     overscan = false;
+    interlace = false;
+    // Alternates every frame
+    field = 0;
 
     readonly controllers = [new SnesController(), new SnesController()];
+    ppu: PpuEvents | null = null;
 
     // Edge for the CPU to take an NMI, and the level of its IRQ line
     nmiPending = false;
@@ -62,6 +74,7 @@ class CpuIo {
     reset(): void {
         this.h = 0;
         this.v = 0;
+        this.field = 0;
         this.frameComplete = false;
         this.nmiPending = false;
         this.irqLine = false;
@@ -115,6 +128,8 @@ class CpuIo {
     // Events at a point in the line, when the H counter moved from after `from` up to `to`
     private lineEvents(from: number, to: number): void {
         this.checkHIrq(from, to);
+        // Each line is drawn as hblank starts, before HDMA changes registers for the next one
+        if (from < HBLANK_START && HBLANK_START <= to && this.v >= 1 && !this.vblank) this.ppu?.renderLine(this.v);
         if (from < HDMA_START && HDMA_START <= to && !this.vblank) this.hdmaRunPending = true;
     }
 
@@ -132,14 +147,19 @@ class CpuIo {
 
     private nextLine(): void {
         this.v++;
-        if (this.v === LINES_PER_FRAME) {
+        // With interlace, the even field has an extra line
+        const lines = this.interlace && this.field === 0 ? LINES_PER_FRAME + 1 : LINES_PER_FRAME;
+        if (this.v === lines) {
             this.v = 0;
             this.frame++;
+            this.field ^= 1;
             this.nmiFlag = false;
             this.hdmaInitPending = true;
+            this.ppu?.frameStart();
         }
 
         if (this.v === (this.overscan ? VBLANK_LINE_OVERSCAN : VBLANK_LINE)) {
+            this.ppu?.vblankStart();
             this.nmiFlag = true;
             if (this.nmiEnable) this.nmiPending = true;
             this.frameComplete = true;
@@ -215,7 +235,11 @@ class CpuIo {
                 if (!this.vIrqEnable && !this.hIrqEnable) this.irqLine = false;
                 break;
             }
-            case 0x4201: this.wrio = data; break;
+            case 0x4201:
+                // Clearing bit 7 latches the PPU's H/V counters
+                if (this.wrio & 0x80 && !(data & 0x80)) this.ppu?.latchCounters();
+                this.wrio = data;
+                break;
             case 0x4202: this.multiplicand = data; break;
             case 0x4203:
                 // The real unit takes 8 CPU cycles, the result is available straight away here

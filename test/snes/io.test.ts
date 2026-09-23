@@ -23,6 +23,23 @@ describe('SNES timing', () => {
         expect(cycles).toBeLessThan(CYCLES_PER_LINE * LINES_PER_FRAME + 8);
     });
 
+    test('interlace alternates fields, the even one a line longer', () => {
+        const io = new CpuIo();
+        io.interlace = true;
+        const frameLength = () => {
+            let cycles = 0;
+            const frame = io.frame;
+            while (io.frame === frame) cycles += io.advance(4);
+            return cycles;
+        };
+        expect(io.field).toBe(0);
+        const even = frameLength();
+        expect(io.field).toBe(1);
+        const odd = frameLength();
+        expect(io.field).toBe(0);
+        expect(Math.round((even - odd) / CYCLES_PER_LINE)).toBe(1);
+    });
+
     test('vblank starts at line 225, or 240 with overscan', () => {
         const io = new CpuIo();
         toLine(io, 224);

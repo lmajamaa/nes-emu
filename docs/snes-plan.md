@@ -99,9 +99,10 @@ Each milestone ends with tests that run automatically, like the NES side.
 ### 7. Controllers and adapter (small)
 
 - 12 buttons (already in `snes/index.ts`), automatic joypad read and manual `$4016/$4017`.
-- `SnesEmulator` implementing `Emulator`. `width` and `height` become getters since hi-res
-  and interlace change the frame size at runtime; `drawScreen` already rebuilds its image
-  buffer when they change, the `<canvas>` size needs the same.
+- `SnesEmulator` implementing `Emulator`. The PPU's frame is always 512 wide (lo-res lines
+  draw every pixel twice), so only `height` changes at runtime, with overscan and later
+  interlace: it becomes a getter, and the `<canvas>` size follows it like `drawScreen`'s
+  image buffer already does.
 - `create()` on the SNES system, which makes it selectable in the menu.
 
 ### 8. Debugger and saves (medium)
@@ -136,13 +137,19 @@ Each milestone ends with tests that run automatically, like the NES side.
 ## Progress
 
 - [x] 1. Cartridge
-- [x] 2. 65816 CPU (SingleStepTests); krom's CPU ROMs pending the PPU
+- [x] 2. 65816 CPU (SingleStepTests and krom's CPU test ROMs)
 - [x] 3. Bus, timing and CPU registers (multiply/divide results are ready at once instead of
   after 8/16 CPU cycles; latching the H/V counters waits for the PPU)
 - [x] 4. DMA and HDMA (timing is 8 master cycles per byte plus fixed overheads, without the
   alignment to the CPU clock; a channel used for DMA and HDMA at once isn't handled; krom's
   DMA/HDMA demos wait for the PPU)
-- [ ] 5. PPU
+- [x] 5. PPU. Hi-res (modes 5 and 6, pseudo hi-res) outputs 512 wide, the sub screen in the
+  even columns like bsnes, and interlace draws the fields into alternate rows of a 448 or 478
+  line frame. krom's CPU tests and 28 of their PPU demos match their screenshots; the
+  128-colors-per-tile-row demos need cycle-accurate IRQ and DMA timing, the pseudo hi-res
+  screenshots only match in the main screen's columns, and the PPU/Interlace screenshots aren't
+  exact enough to compare with (in InterlaceRPG the sprite is a line lower than here, worth
+  checking against another reference)
 - [ ] 6. APU
 - [ ] 7. Controllers and adapter
 - [ ] 8. Debugger and saves

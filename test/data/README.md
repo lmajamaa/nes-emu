@@ -66,3 +66,16 @@ repository doesn't state a license.
 
 Run `bun run fetch-65816-tests [casesPerFile]` to download the sample again (about 60 MB of
 partial requests), optionally with a different number of cases.
+
+## `krom/`
+
+`krom.bundle.gz` bundles krom's (Peter Lemon's) SNES test ROMs and demos, each with the
+reference screenshot next to it (see `test/snes/bundle.ts` for the format):
+the 65816 CPU tests (which print PASS or FAIL for every case), memory map tests, and PPU demos
+of backgrounds, color math, HDMA, mode 7, mosaic and windows. `test/snes/krom.test.ts` runs
+each one and compares the screen with its screenshot, the list is in `test/snes/krom-cases.ts`.
+`PPU/Mode7/Perspective/Perspective.png` is a BMP file despite its name.
+
+Source: https://github.com/PeterLemon/SNES. The repository doesn't state a license.
+
+Run `bun run fetch-krom-tests` to download them again.

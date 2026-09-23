@@ -6,6 +6,7 @@ import type { Bus65816 } from './cpu';
 import type SnesCartridge from './cartridge';
 import Dma, { type DmaBus } from './dma';
 import CpuIo from './io';
+import Ppu from './ppu';
 
 const IDLE_CYCLES = 6;
 
@@ -22,6 +23,7 @@ class SnesBus implements Bus65816, DmaBus {
     readonly wram = new Uint8Array(0x20000);
     readonly io = new CpuIo();
     readonly dma = new Dma(this);
+    readonly ppu = new Ppu(this.io);
     cartridge: SnesCartridge | null = null;
 
     // $2140-$2143 as the CPU writes them for the APU, and as the APU writes them back
@@ -37,9 +39,14 @@ class SnesBus implements Bus65816, DmaBus {
     private wramAddress = 0;
     private inHdma = false;
 
+    constructor() {
+        this.io.ppu = this.ppu;
+    }
+
     reset(): void {
         this.io.reset();
         this.dma.reset();
+        this.ppu.reset();
         this.wramAddress = 0;
         this.apuInputs.fill(0);
         this.apuOutputs.fill(0);
@@ -157,6 +164,12 @@ class SnesBus implements Bus65816, DmaBus {
 
     // B-bus, $21xx
     private readBRaw(addr: number): number {
+        if (addr === 0x37) {
+            // Latches the H/V counters, if WRIO allows it
+            if (this.io.wrio & 0x80) this.ppu.latchCounters();
+            return -1;
+        }
+        if (addr >= 0x34 && addr < 0x40) return this.ppu.read(addr);
         if (addr >= 0x40 && addr < 0x80) return this.apuOutputs[addr & 3];
         if (addr === 0x80) {
             const data = this.wram[this.wramAddress];
@@ -167,6 +180,10 @@ class SnesBus implements Bus65816, DmaBus {
     }
 
     writeB(addr: number, data: number): void {
+        if (addr < 0x34) {
+            this.ppu.write(addr, data);
+            return;
+        }
         if (addr >= 0x40 && addr < 0x80) {
             this.apuInputs[addr & 3] = data;
             return;
