@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
-import { hex } from '../utils';
-import type Bus from '../nes/bus';
+import { hex } from '../../../utils';
+import type Bus from '../../../nes/bus';
 
 interface RamProps {
     nes: Bus;

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Sprite } from '../nes/graphics';
+import type { Sprite } from '../../../nes/graphics';
 
 const PatternTable = ({ patternTable }: { patternTable: Sprite }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);

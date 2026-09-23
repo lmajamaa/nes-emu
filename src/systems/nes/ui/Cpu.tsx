@@ -1,5 +1,5 @@
-import { hex } from '../utils';
-import type { CpuState } from '../nes/cpu';
+import { hex } from '../../../utils';
+import type { CpuState } from '../../../nes/cpu';
 
 const decimal = (value: number) => String(value).padStart(3, ' ');
 

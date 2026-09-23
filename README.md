@@ -39,8 +39,10 @@ bun run dev
 ```
 
 Then open http://localhost:3000. The emulator starts with the `nestest` test ROM loaded and
-paused. Press **Space** to run it, or **Open ROM…** to load a `.nes` file from your computer.
-ROMs are read in the browser and not uploaded anywhere. No games are included.
+paused. Press **Space** to run it. Click the console logo to pick another game, or **Open ROM
+file…** to load a `.nes` file from your computer. ROMs are read in the browser and not uploaded
+anywhere. No games are included, but ROMs you put in `public/roms` (git ignored) are listed in
+the menu, grouped by console.
 
 Sound starts when you first run the emulator with Space, or use the Sound button or M, as
 browsers don't let pages play audio before the user interacts with them.
@@ -60,7 +62,7 @@ browsers don't let pages play audio before the user interacts with them.
 | Space | Run / pause |
 | C | Step one instruction |
 | F | Step one frame |
-| R | Reset the CPU |
+| R | Reset the console |
 | I / N | Trigger an IRQ / NMI |
 | P | Cycle the palette used by the pattern table view |
 | M | Mute / unmute |
@@ -96,10 +98,11 @@ CI runs the type check, the tests and the build on every push to `main` and on p
 
 ```
 src/
-  nes/          The emulator: CPU, PPU, APU, bus, cartridge, mappers
-  audio/        Web Audio output (an AudioWorklet playing the APU's samples)
-  components/   Debugger views
-  App.tsx       UI, keyboard input and the emulation loop
+  nes/          The NES emulator: CPU, PPU, APU, bus, cartridge, mappers
+  systems/      One adapter per console, implementing the Emulator interface in types.ts
+    nes/        NES adapter, logo and debugger views
+    snes/       SNES placeholder, listed in the menu as coming soon
+  shell/        Console independent UI: game menu, screen, keyboard, emulation loop, audio
 test/           Tests, and test ROMs in test/data (with their sources)
 scripts/        Test data tooling
 ```
