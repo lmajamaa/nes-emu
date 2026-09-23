@@ -5,7 +5,7 @@
 A Nintendo Entertainment System (NES) emulator that runs in the browser, written in TypeScript
 with a React debugger UI. It started in 2019 following javidx9's [NES emulator series](https://github.com/OneLoneCoder/olcNES) but was forgotten. Implementation was restarted in 2026, adding controllers, more cartridge mappers and a test suite built on well-known NES test ROMs.
 
-It can run official games like Super Mario Bros., Super Mario Bros. 2 and 3, Donkey Kong and Bubble Bobble.
+It can run official games like Super Mario Bros., Super Mario Bros. 2 and 3, Donkey Kong, Bubble Bobble and Mike Tyson's Punch-Out!!.
 
 ## Features
 
@@ -15,8 +15,8 @@ It can run official games like Super Mario Bros., Super Mario Bros. 2 and 3, Don
 - **APU**: both pulse channels, triangle, noise and DMC, the frame counter and its IRQ, played
   through the Web Audio API.
 - **Controllers**: player 1 on the keyboard.
-- **Cartridges**: iNES ROMs using mapper 0 (NROM), 1 (MMC1) or 4 (MMC3, including its scanline
-  IRQ), with PRG RAM and CHR RAM.
+- **Cartridges**: iNES ROMs using mapper 0 (NROM), 1 (MMC1), 4 (MMC3, including its scanline
+  IRQ) or 9 (MMC2), with PRG RAM and CHR RAM.
 - **Debugger**: step one instruction or frame at a time, and see the CPU registers,
   disassembly around the program counter, RAM, palettes and pattern tables.
 
