@@ -1,7 +1,12 @@
-import { instructions, isImplemented, type AddressingMode, type Mnemonic, type UnofficialMnemonic } from './instructions';
+import { instructions, type AddressingMode, type Mnemonic } from './instructions';
 import { hex, convertUint8ToInt } from '../utils';
 
 // MOS 6502 CPU Implementation -  Thanks for https://github.com/OneLoneCoder/olcNES and https://github.com/fredericcambon/nes
+
+// Part of the unstable XAA and LXA results, they depend on the chip. LXA uses what blargg's
+// tests, verified on a NES, expect. XAA isn't tested by them and uses the usual 6502 value.
+const LXA_MAGIC = 0xFF;
+const XAA_MAGIC = 0xEE;
 
 export interface CpuBus {
     cpuRead(addr: number, readOnly?: boolean): number;
@@ -10,8 +15,8 @@ export interface CpuBus {
 
 export interface InstructionInfo {
     number: number;
-    opcode: Mnemonic | UnofficialMnemonic | '???';
-    addrmode: AddressingMode | '???';
+    opcode: Mnemonic;
+    addrmode: AddressingMode;
     size: number;
     cycles: number;
 }
@@ -58,12 +63,8 @@ class Cpu {
             const { opcode, addrmode, cycles } = this.lookup(this.opcode);
             this.cycles = cycles;
 
-            // Opcodes missing from the table and unofficial opcodes that are
-            // not implemented yet are executed as illegal opcodes
-            const mode: AddressingMode = addrmode === '???' ? 'IMP' : addrmode;
-            const operation: Mnemonic = opcode !== '???' && isImplemented(opcode) ? opcode : 'XXX';
-            const additional_cycle1 = this[mode]();
-            const additional_cycle2 = this[operation]();
+            const additional_cycle1 = this[addrmode]();
+            const additional_cycle2 = this[opcode]();
 
             // An extra cycle is only needed when the addressing mode crossed
             // a page AND the instruction is one that is affected by it
@@ -210,14 +211,8 @@ class Cpu {
     }
 
     lookup(number: number): InstructionInfo {
-        const instruction = instructions[number];
-        if (instruction) {
-            const [opcode, addrmode, size, cycles] = instruction;
-
-            return { number, opcode, addrmode, size, cycles };
-        } else {
-            return { number, opcode: '???', addrmode: '???', size: 1, cycles: 1 };
-        }
+        const [opcode, addrmode, size, cycles] = instructions[number];
+        return { number, opcode, addrmode, size, cycles };
     }
 
     // Addressing modes
@@ -580,23 +575,11 @@ class Cpu {
         }
         return 0;
     }
+    // The unofficial NOPs with an operand read it, and the absolute,X ones take a cycle
+    // more when crossing a page
     NOP(): number {
-        // Sadly not all NOPs are equal, Ive added a few here
-        // based on https://wiki.nesdev.com/w/index.php/CPU_unofficial_opcodes
-        // and will add more based on game compatibility, and ultimately
-        // I'd like to cover all illegal opcodes too
-        switch (this.opcode) {
-            case 0x1C:
-            case 0x3C:
-            case 0x5C:
-            case 0x7C:
-            case 0xDC:
-            case 0xFC:
-                return 1;
-            default:
-                break;
-        }
-        return 0;
+        this.fetch();
+        return 1;
     }
     /** Instruction: Bitwise Logic OR */
     ORA(): number {
@@ -761,9 +744,132 @@ class Cpu {
         this.setZN(this.a);
         return 0;
     }
-    /** Illegal opcodes */
-    XXX(): number {
-        console.log('Illegal opcode', this.opcode);
+    // Unofficial instructions, see https://www.nesdev.org/wiki/CPU_unofficial_opcodes
+
+    // Read-modify-write followed by an ALU operation, which reads the value just written
+    SLO(): number {
+        this.ASL();
+        this.ORA();
+        return 0;
+    }
+    RLA(): number {
+        this.ROL();
+        this.AND();
+        return 0;
+    }
+    SRE(): number {
+        this.LSR();
+        this.EOR();
+        return 0;
+    }
+    RRA(): number {
+        this.ROR();
+        this.ADC();
+        return 0;
+    }
+    DCP(): number {
+        this.DEC();
+        this.CMP();
+        return 0;
+    }
+    ISC(): number {
+        this.INC();
+        this.SBC();
+        return 0;
+    }
+    LAX(): number {
+        this.fetch();
+        this.a = this.fetched;
+        this.x = this.fetched;
+        this.setZN(this.a);
+        return 1;
+    }
+    SAX(): number {
+        this.write(this.addr_abs, this.a & this.x);
+        return 0;
+    }
+    ANC(): number {
+        this.AND();
+        this.c = this.n;
+        return 0;
+    }
+    ALR(): number {
+        this.fetch();
+        const value = this.a & this.fetched;
+        this.c = value & 0x01;
+        this.a = value >> 1;
+        this.setZN(this.a);
+        return 0;
+    }
+    ARR(): number {
+        this.fetch();
+        this.a = ((this.a & this.fetched) >> 1) | (this.c << 7);
+        this.setZN(this.a);
+        this.c = (this.a >> 6) & 0x01;
+        this.v = ((this.a >> 6) ^ (this.a >> 5)) & 0x01;
+        return 0;
+    }
+    // X = (A & X) - M, setting the flags like CMP
+    AXS(): number {
+        this.fetch();
+        const value = this.a & this.x;
+        this.c = value >= this.fetched ? 1 : 0;
+        this.x = (value - this.fetched) & 0xFF;
+        this.setZN(this.x);
+        return 0;
+    }
+    LAS(): number {
+        this.fetch();
+        const value = this.fetched & this.stkp;
+        this.a = value;
+        this.x = value;
+        this.stkp = value;
+        this.setZN(value);
+        return 1;
+    }
+    // A = X = (A | magic) & M
+    LXA(): number {
+        this.fetch();
+        this.a = (this.a | LXA_MAGIC) & this.fetched;
+        this.x = this.a;
+        this.setZN(this.a);
+        return 0;
+    }
+    XAA(): number {
+        this.fetch();
+        this.a = (this.a | XAA_MAGIC) & this.x & this.fetched;
+        this.setZN(this.a);
+        return 0;
+    }
+    // Stores the value ANDed with (high byte of the base address + 1). When the index crosses
+    // a page, that result also replaces the high byte of the address.
+    private storeAndHigh(value: number, index: number): void {
+        const base = (this.addr_abs - index) & 0xFFFF;
+        const result = value & ((base >> 8) + 1) & 0xFF;
+        let addr = this.addr_abs;
+        if ((base & 0xFF00) !== (addr & 0xFF00)) addr = (result << 8) | (addr & 0x00FF);
+        this.write(addr, result);
+    }
+    SHY(): number {
+        this.storeAndHigh(this.y, this.x);
+        return 0;
+    }
+    SHX(): number {
+        this.storeAndHigh(this.x, this.y);
+        return 0;
+    }
+    SHA(): number {
+        this.storeAndHigh(this.a & this.x, this.y);
+        return 0;
+    }
+    TAS(): number {
+        this.stkp = this.a & this.x;
+        this.storeAndHigh(this.stkp, this.y);
+        return 0;
+    }
+    // Locks up the CPU until reset
+    JAM(): number {
+        this.pc = (this.pc - 1) & 0xFFFF;
         return 0;
     }
 

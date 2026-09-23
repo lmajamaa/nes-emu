@@ -13,14 +13,17 @@ Source: https://github.com/christopherpow/nes-test-roms/tree/master/other
 
 ## `6502/`
 
-`official.json.gz` is a sample of Tom Harte's 6502 SingleStepTests for the 151 official
-opcodes, bundled as gzipped JSON keyed by opcode (`{ "00": [...], "01": [...], ... }`).
+`opcodes.json.gz` is a sample of Tom Harte's 6502 SingleStepTests for every opcode except
+the 12 that lock up the CPU (JAM), bundled as gzipped JSON keyed by opcode (`{ "00": [...], "01": [...], ... }`).
 Each opcode has 100 cases. Two changes from upstream:
 
 - The per-cycle bus activity is replaced by the cycle count (`"cycles": 7`), because the
   emulator doesn't run cycle by cycle.
-- ADC/SBC cases with the decimal flag set are left out, because the NES CPU has no
-  decimal mode.
+- Cases with the decimal flag set are left out for instructions affected by it (ADC, SBC and
+  the unofficial RRA, ISC and ARR), because the NES CPU has no decimal mode.
+
+The unstable LXA (`$AB`) is expected to fail: its result depends on the chip, and the emulator
+matches blargg's NES-verified tests instead, see `test/cpu.singlestep.test.ts`.
 
 Source: https://github.com/SingleStepTests/65x02 (`6502/v1`), MIT licensed, see `6502/LICENSE`.
 
@@ -45,8 +48,8 @@ Source: https://github.com/christopherpow/nes-test-roms/tree/master/mmc3_test_2
 
 ## `blargg-instr/`
 
-`official_only.nes` from blargg's `instr_test-v5`: 16 tests of every official instruction,
-on an MMC1 (mapper 1) board with CHR RAM. It reports through `$6000` like the APU tests.
-The suite also has `all_instrs.nes`, which additionally needs the unofficial opcodes.
+`all_instrs.nes` from blargg's `instr_test-v5`: 16 tests of every official and unofficial
+instruction, on an MMC1 (mapper 1) board with CHR RAM. It reports through `$6000` like the
+APU tests.
 
 Source: https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5

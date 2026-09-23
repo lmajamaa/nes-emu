@@ -9,7 +9,8 @@ It can run official games like Super Mario Bros., Super Mario Bros. 2 and 3, Don
 
 ## Features
 
-- **CPU**: the 6502 (2A03) with all official opcodes and correct cycle counts per instruction.
+- **CPU**: the 6502 (2A03) with all 256 opcodes, including the unofficial ones, and correct
+  cycle counts per instruction.
 - **PPU**: backgrounds with scrolling, 8x8 and 8x16 sprites with flipping and priority,
   sprite zero hit and sprite overflow, and nametable mirroring.
 - **APU**: both pulse channels, triangle, noise and DMC, the frame counter and its IRQ, played
@@ -22,7 +23,6 @@ It can run official games like Super Mario Bros., Super Mario Bros. 2 and 3, Don
 
 ### Not supported (yet)
 
-- Unofficial opcodes.
 - Cycle-accurate CPU timing: instructions run all at once on their first cycle, so memory
   accesses within an instruction happen a few cycles early. Games don't notice, but a few
   timing test ROMs do.
@@ -83,9 +83,11 @@ its parts. Everything they need is in the repository, so they run offline.
 
 - **nestest**: runs kevtris's CPU test ROM and compares every instruction with the reference log.
 - **6502 SingleStepTests**: Tom Harte's per-opcode tests of registers, memory and cycle counts.
-- **blargg's test ROMs**: `instr_test` (every official instruction), `apu_test` and `mmc3_test`.
-  Two MMC3 tests are marked as known failures: one needs a cycle-accurate CPU, and the other tests
-  a different MMC3 chip revision.
+- **blargg's test ROMs**: `instr_test` (every instruction), `apu_test` and `mmc3_test`.
+
+A few tests are marked as known failures, which turn red if they start passing: an MMC3 test
+that needs a cycle-accurate CPU, one for a different MMC3 chip revision, and the unstable `LXA`
+opcode, whose result depends on the chip and differs between the SingleStepTests and the NES.
 - **Unit tests** for the PPU, sprites, APU channels, controllers and mappers.
 
 CI runs the type check, the tests and the build on every push to `main` and on pull requests.

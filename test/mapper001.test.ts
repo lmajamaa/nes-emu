@@ -3,7 +3,7 @@ import Bus from '../src/nes/bus';
 import Cartridge from '../src/nes/cartridge';
 import { MIRROR } from '../src/nes/constants';
 import { runBlarggTest } from './blargg';
-import { BLARGG_INSTR_OFFICIAL_ROM, buildRom, muteConsole } from './helpers';
+import { BLARGG_INSTR_ROM, buildRom, muteConsole } from './helpers';
 
 const CONTROL = 0x8000;
 const CHR_BANK_0 = 0xA000;
@@ -166,8 +166,8 @@ describe('MMC1 mirroring', () => {
 });
 
 describe('blargg instr_test-v5 on MMC1', () => {
-    // Switches between its 16 tests with MMC1, and runs every official instruction
-    test('official_only.nes passes', () => {
-        expect(runBlarggTest(BLARGG_INSTR_OFFICIAL_ROM, 60 * 60)).toEqual({ status: 0, text: 'All 16 tests passed' });
+    // Switches between its 16 tests with MMC1, and runs every official and unofficial instruction
+    test('all_instrs.nes passes', () => {
+        expect(runBlarggTest(BLARGG_INSTR_ROM, 60 * 60)).toEqual({ status: 0, text: 'All 16 tests passed' });
     }, 60000);
 });

@@ -8,10 +8,10 @@ import { hex } from '../src/utils';
 // All test data lives in the repo under test/data, see test/data/README.md
 export const NESTEST_ROM = new URL('./data/nestest/nestest.nes', import.meta.url);
 export const NESTEST_LOG = new URL('./data/nestest/nestest.log', import.meta.url);
-export const SINGLE_STEP_TESTS = new URL('./data/6502/official.json.gz', import.meta.url);
+export const SINGLE_STEP_TESTS = new URL('./data/6502/opcodes.json.gz', import.meta.url);
 export const BLARGG_APU_DIR = new URL('./data/blargg-apu/', import.meta.url);
 export const BLARGG_MMC3_DIR = new URL('./data/blargg-mmc3/', import.meta.url);
-export const BLARGG_INSTR_OFFICIAL_ROM = new URL('./data/blargg-instr/official_only.nes', import.meta.url);
+export const BLARGG_INSTR_ROM = new URL('./data/blargg-instr/all_instrs.nes', import.meta.url);
 
 export interface SingleStepState {
     pc: number;

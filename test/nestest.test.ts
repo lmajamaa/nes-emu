@@ -1,6 +1,6 @@
 // Runs nestest.nes in automation mode (PC = $C000, no PPU needed) and compares
 // the CPU state before every instruction with the reference log from Nintendulator.
-// Only the official opcode section of the log is used.
+// The log covers the official opcodes and then the stable unofficial ones.
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -12,7 +12,7 @@ import { fmt, muteConsole, NESTEST_LOG as LOG, NESTEST_ROM as ROM, normalizeFlag
 const CONTEXT_LINES = 3;
 
 // C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0, 21 CYC:7
-const LINE_PATTERN = /^([0-9A-F]{4})  .{9}(.).*A:([0-9A-F]{2}) X:([0-9A-F]{2}) Y:([0-9A-F]{2}) P:([0-9A-F]{2}) SP:([0-9A-F]{2}).*CYC:(\d+)$/;
+const LINE_PATTERN = /^([0-9A-F]{4}) .*A:([0-9A-F]{2}) X:([0-9A-F]{2}) Y:([0-9A-F]{2}) P:([0-9A-F]{2}) SP:([0-9A-F]{2}).*CYC:(\d+)$/;
 
 interface CpuSnapshot {
     pc: number;
@@ -37,18 +37,16 @@ function parseLog(): LogEntry[] {
     for (const [index, line] of lines.entries()) {
         const m = line.match(LINE_PATTERN);
         if (!m) throw new Error(`Unparseable nestest.log line ${index + 1}: ${line}`);
-        // Unofficial opcodes are marked with '*' - the official tests end there
-        if (m[2] === '*') break;
         entries.push({
             line: index + 1,
             text: line,
             pc: parseInt(m[1], 16),
-            a: parseInt(m[3], 16),
-            x: parseInt(m[4], 16),
-            y: parseInt(m[5], 16),
-            p: parseInt(m[6], 16),
-            sp: parseInt(m[7], 16),
-            cyc: Number(m[8]),
+            a: parseInt(m[2], 16),
+            x: parseInt(m[3], 16),
+            y: parseInt(m[4], 16),
+            p: parseInt(m[5], 16),
+            sp: parseInt(m[6], 16),
+            cyc: Number(m[7]),
         });
     }
     return entries;
@@ -75,7 +73,7 @@ function context(log: LogEntry[], index: number): string {
         .map(e => `  ${String(e.line).padStart(4)}: ${e.text}`).join('\n');
 }
 
-describe('nestest.nes (official opcodes)', () => {
+describe('nestest.nes', () => {
     const log = parseLog();
     const trace: CpuSnapshot[] = [];
     let bus: Bus;
@@ -120,8 +118,9 @@ describe('nestest.nes (official opcodes)', () => {
         }
     });
 
-    test('reports no errors in $0002', () => {
-        // nestest stores the number of the first failed official test in $02
-        expect(fmt(bus.cpuRam[0x02])).toBe(fmt(0x00));
+    test('reports no errors in $0002 and $0003', () => {
+        // nestest stores the number of the first failed test in $02 (official opcodes)
+        // and $03 (unofficial opcodes)
+        expect([bus.cpuRam[0x02], bus.cpuRam[0x03]].map(value => fmt(value))).toEqual([fmt(0x00), fmt(0x00)]);
     });
 });

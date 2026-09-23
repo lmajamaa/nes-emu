@@ -53,14 +53,23 @@ function runCase(testCase: SingleStepCase): string[] {
 // { "00": [cases...], "01": [...], ... } keyed by opcode in hex
 const bundle: SingleStepBundle = JSON.parse(gunzipSync(readFileSync(SINGLE_STEP_TESTS)).toString());
 
+// The tests model a generic NMOS 6502, which differs from the NES in chip dependent details.
+// Marked so that they turn red if they start passing.
+const KNOWN_DIFFERENCES: Record<number, string> = {
+    // LXA's magic value, the emulator uses the one blargg's NES-verified tests expect
+    0xAB: 'LXA magic value of the NES',
+};
+
 describe('6502 SingleStepTests', () => {
     // Sort, as object keys like "10" would otherwise be ordered before "0a"
     for (const key of Object.keys(bundle).sort()) {
         const cases = bundle[key];
         const opcode = parseInt(key, 16);
-        const [name, addrmode] = instructions[opcode] ?? ['???', '???'];
+        const [name, addrmode] = instructions[opcode];
 
-        test(`${fmt(opcode)} ${name} ${addrmode}`, () => {
+        const title = `${fmt(opcode)} ${name} ${addrmode}`;
+        const knownDifference = KNOWN_DIFFERENCES[opcode];
+        (knownDifference ? test.failing : test)(knownDifference ? `${title} (${knownDifference})` : title, () => {
             const failures = [];
             for (const testCase of cases) {
                 let errors;
