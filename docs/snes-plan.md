@@ -139,7 +139,9 @@ Each milestone ends with tests that run automatically, like the NES side.
 - [x] 2. 65816 CPU (SingleStepTests); krom's CPU ROMs pending the PPU
 - [x] 3. Bus, timing and CPU registers (multiply/divide results are ready at once instead of
   after 8/16 CPU cycles; latching the H/V counters waits for the PPU)
-- [ ] 4. DMA and HDMA
+- [x] 4. DMA and HDMA (timing is 8 master cycles per byte plus fixed overheads, without the
+  alignment to the CPU clock; a channel used for DMA and HDMA at once isn't handled; krom's
+  DMA/HDMA demos wait for the PPU)
 - [ ] 5. PPU
 - [ ] 6. APU
 - [ ] 7. Controllers and adapter

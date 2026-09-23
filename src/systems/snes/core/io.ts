@@ -13,6 +13,7 @@ const REFRESH_START = 538;
 const REFRESH_CYCLES = 40;
 const HBLANK_START = 274 * 4;
 const HBLANK_END = 1 * 4;
+const HDMA_START = 276 * 4;
 const AUTO_JOYPAD_CYCLES = 4224;
 const CPU_VERSION = 0x02;
 
@@ -31,6 +32,9 @@ class CpuIo {
     // Edge for the CPU to take an NMI, and the level of its IRQ line
     nmiPending = false;
     irqLine = false;
+    // HDMA to set up for the frame, or to run for the line, for the bus to handle
+    hdmaInitPending = false;
+    hdmaRunPending = false;
 
     // NMITIMEN
     private nmiEnable = false;
@@ -61,6 +65,9 @@ class CpuIo {
         this.frameComplete = false;
         this.nmiPending = false;
         this.irqLine = false;
+        // The counters start at the top of a frame
+        this.hdmaInitPending = true;
+        this.hdmaRunPending = false;
         this.nmiEnable = false;
         this.hIrqEnable = false;
         this.vIrqEnable = false;
@@ -95,14 +102,20 @@ class CpuIo {
         }
 
         if (this.h >= CYCLES_PER_LINE) {
-            this.checkHIrq(before, CYCLES_PER_LINE - 1);
+            this.lineEvents(before, CYCLES_PER_LINE - 1);
             this.h -= CYCLES_PER_LINE;
             this.nextLine();
-            this.checkHIrq(-1, this.h);
+            this.lineEvents(-1, this.h);
         } else {
-            this.checkHIrq(before, this.h);
+            this.lineEvents(before, this.h);
         }
         return cycles;
+    }
+
+    // Events at a point in the line, when the H counter moved from after `from` up to `to`
+    private lineEvents(from: number, to: number): void {
+        this.checkHIrq(from, to);
+        if (from < HDMA_START && HDMA_START <= to && !this.vblank) this.hdmaRunPending = true;
     }
 
     // When the H counter moved from after `from` up to `to` in the current line
@@ -123,6 +136,7 @@ class CpuIo {
             this.v = 0;
             this.frame++;
             this.nmiFlag = false;
+            this.hdmaInitPending = true;
         }
 
         if (this.v === (this.overscan ? VBLANK_LINE_OVERSCAN : VBLANK_LINE)) {

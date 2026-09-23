@@ -1,9 +1,10 @@
 // The SNES memory map, as the 65816 sees it: work RAM, the B-bus ($2100-$21FF) with the PPU,
-// APU ports and the work RAM port, the CPU's I/O registers, and the cartridge. Each access
-// moves the master clock on by the speed of the memory it touches.
+// APU ports and the work RAM port, the CPU's I/O and DMA registers, and the cartridge. Each
+// access moves the master clock on by the speed of the memory it touches.
 
 import type { Bus65816 } from './cpu';
 import type SnesCartridge from './cartridge';
+import Dma, { type DmaBus } from './dma';
 import CpuIo from './io';
 
 const IDLE_CYCLES = 6;
@@ -17,9 +18,10 @@ export function accessCycles(addr: number, romSpeed: number): number {
     return 12;
 }
 
-class SnesBus implements Bus65816 {
+class SnesBus implements Bus65816, DmaBus {
     readonly wram = new Uint8Array(0x20000);
     readonly io = new CpuIo();
+    readonly dma = new Dma(this);
     cartridge: SnesCartridge | null = null;
 
     // $2140-$2143 as the CPU writes them for the APU, and as the APU writes them back
@@ -33,9 +35,11 @@ class SnesBus implements Bus65816 {
 
     // WMADD, the work RAM port address
     private wramAddress = 0;
+    private inHdma = false;
 
     reset(): void {
         this.io.reset();
+        this.dma.reset();
         this.wramAddress = 0;
         this.apuInputs.fill(0);
         this.apuOutputs.fill(0);
@@ -58,8 +62,37 @@ class SnesBus implements Bus65816 {
         this.tick(IDLE_CYCLES);
     }
 
-    private tick(cycles: number): void {
-        this.cycles += this.io.advance(cycles);
+    tick(cycles: number): void {
+        const { io } = this;
+        this.cycles += io.advance(cycles);
+        // HDMA takes over the bus at its point in the line, even in the middle of a DMA
+        if ((io.hdmaInitPending || io.hdmaRunPending) && !this.inHdma) {
+            this.inHdma = true;
+            if (io.hdmaInitPending) {
+                io.hdmaInitPending = false;
+                this.dma.hdmaInit();
+            }
+            if (io.hdmaRunPending) {
+                io.hdmaRunPending = false;
+                this.dma.hdmaRun();
+            }
+            this.inHdma = false;
+        }
+    }
+
+    // A-bus and B-bus access for DMA, which takes its own time
+    readA(addr: number): number {
+        const data = this.readRaw(addr);
+        return data >= 0 ? data : this.openBus;
+    }
+
+    writeA(addr: number, data: number): void {
+        this.writeRaw(addr, data);
+    }
+
+    readB(addr: number): number {
+        const data = this.readBRaw(addr);
+        return data >= 0 ? data : this.openBus;
     }
 
     // Returns -1 for open bus
@@ -71,9 +104,10 @@ class SnesBus implements Bus65816 {
         if ((bank & 0x40) === 0) {
             // Banks $00-$3F and $80-$BF
             if (offset < 0x2000) return this.wram[offset];
-            if (offset >= 0x2100 && offset < 0x2200) return this.readB(offset & 0xFF);
+            if (offset >= 0x2100 && offset < 0x2200) return this.readBRaw(offset & 0xFF);
             if (offset === 0x4016 || offset === 0x4017) return this.io.readJoypad(offset & 1, this.openBus);
             if (offset >= 0x4200 && offset < 0x4220) return this.io.read(offset, this.openBus);
+            if (offset >= 0x4300 && offset < 0x4380) return this.dma.readRegister(offset);
             if (offset >= 0x2000 && offset < 0x6000) return -1;
         }
         return this.cartridge?.read(addr) ?? -1;
@@ -100,8 +134,20 @@ class SnesBus implements Bus65816 {
                 this.io.writeJoypadLatch(data);
                 return;
             }
+            if (offset === 0x420B) {
+                this.dma.start(data);
+                return;
+            }
+            if (offset === 0x420C) {
+                this.dma.hdmaEnable = data;
+                return;
+            }
             if (offset >= 0x4200 && offset < 0x4220) {
                 this.io.write(offset, data);
+                return;
+            }
+            if (offset >= 0x4300 && offset < 0x4380) {
+                this.dma.writeRegister(offset, data);
                 return;
             }
             if (offset >= 0x2000 && offset < 0x6000) return;
@@ -110,7 +156,7 @@ class SnesBus implements Bus65816 {
     }
 
     // B-bus, $21xx
-    private readB(addr: number): number {
+    private readBRaw(addr: number): number {
         if (addr >= 0x40 && addr < 0x80) return this.apuOutputs[addr & 3];
         if (addr === 0x80) {
             const data = this.wram[this.wramAddress];
@@ -120,7 +166,7 @@ class SnesBus implements Bus65816 {
         return -1;
     }
 
-    private writeB(addr: number, data: number): void {
+    writeB(addr: number, data: number): void {
         if (addr >= 0x40 && addr < 0x80) {
             this.apuInputs[addr & 3] = data;
             return;
