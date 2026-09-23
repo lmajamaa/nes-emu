@@ -166,8 +166,9 @@ describe('MMC1 mirroring', () => {
 });
 
 describe('blargg instr_test-v5 on MMC1', () => {
-    // Switches between its 16 tests with MMC1, and runs every official and unofficial instruction
-    test('all_instrs.nes passes', () => {
+    // Switches between its 16 tests with MMC1, and runs every official and unofficial instruction.
+    // Takes about 10 seconds, so it only runs with SLOW_TESTS=1, as in CI.
+    test.skipIf(!process.env.SLOW_TESTS)('all_instrs.nes passes', () => {
         expect(runBlarggTest(BLARGG_INSTR_ROM, 60 * 60)).toEqual({ status: 0, text: 'All 16 tests passed' });
     }, 60000);
 });
