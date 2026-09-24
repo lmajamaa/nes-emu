@@ -150,6 +150,10 @@ Each milestone ends with tests that run automatically, like the NES side.
   screenshots only match in the main screen's columns, and the PPU/Interlace screenshots aren't
   exact enough to compare with (in InterlaceRPG the sprite is a line lower than here, worth
   checking against another reference)
-- [ ] 6. APU
+- [x] 6. APU. The SPC700 passes the SingleStepTests and krom's SPC700 test ROMs (which upload
+  their tests through the IPL, so they cover the ports and timing too). The DSP makes a whole
+  sample at a time rather than cycle by cycle, keys voices on at the next sample rather than
+  every other one, and decodes BRR a block at a time; its 32 kHz stereo output still has to be
+  resampled for the browser in milestone 7
 - [ ] 7. Controllers and adapter
 - [ ] 8. Debugger and saves

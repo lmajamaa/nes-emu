@@ -2,10 +2,11 @@
 // APU ports and the work RAM port, the CPU's I/O and DMA registers, and the cartridge. Each
 // access moves the master clock on by the speed of the memory it touches.
 
+import Apu from './apu/apu';
 import type { Bus65816 } from './cpu';
 import type SnesCartridge from './cartridge';
 import Dma, { type DmaBus } from './dma';
-import CpuIo from './io';
+import CpuIo, { CYCLES_PER_LINE } from './io';
 import Ppu from './ppu';
 
 const IDLE_CYCLES = 6;
@@ -26,9 +27,9 @@ class SnesBus implements Bus65816, DmaBus {
     readonly ppu = new Ppu(this.io);
     cartridge: SnesCartridge | null = null;
 
-    // $2140-$2143 as the CPU writes them for the APU, and as the APU writes them back
-    readonly apuInputs = new Uint8Array(4);
-    readonly apuOutputs = new Uint8Array(4);
+    readonly apu = new Apu();
+    // When the APU is next caught up, at least once a line to keep the sound flowing
+    private apuSyncAt = 0;
 
     // The last value on the data bus, returned by reads of unmapped addresses
     openBus = 0;
@@ -48,8 +49,9 @@ class SnesBus implements Bus65816, DmaBus {
         this.dma.reset();
         this.ppu.reset();
         this.wramAddress = 0;
-        this.apuInputs.fill(0);
-        this.apuOutputs.fill(0);
+        this.apu.reset();
+        this.apu.synchronize(this.cycles);
+        this.apuSyncAt = this.cycles + CYCLES_PER_LINE;
     }
 
     read(addr: number): number {
@@ -72,6 +74,7 @@ class SnesBus implements Bus65816, DmaBus {
     tick(cycles: number): void {
         const { io } = this;
         this.cycles += io.advance(cycles);
+        if (this.cycles >= this.apuSyncAt) this.syncApu();
         // HDMA takes over the bus at its point in the line, even in the middle of a DMA
         if ((io.hdmaInitPending || io.hdmaRunPending) && !this.inHdma) {
             this.inHdma = true;
@@ -85,6 +88,11 @@ class SnesBus implements Bus65816, DmaBus {
             }
             this.inHdma = false;
         }
+    }
+
+    syncApu(): void {
+        this.apu.catchUp(this.cycles);
+        this.apuSyncAt = this.cycles + CYCLES_PER_LINE;
     }
 
     // A-bus and B-bus access for DMA, which takes its own time
@@ -170,7 +178,11 @@ class SnesBus implements Bus65816, DmaBus {
             return -1;
         }
         if (addr >= 0x34 && addr < 0x40) return this.ppu.read(addr);
-        if (addr >= 0x40 && addr < 0x80) return this.apuOutputs[addr & 3];
+        if (addr >= 0x40 && addr < 0x80) {
+            // The APU catches up first, so the SPC700 answers at the right time
+            this.syncApu();
+            return this.apu.cpuRead(addr);
+        }
         if (addr === 0x80) {
             const data = this.wram[this.wramAddress];
             this.wramAddress = (this.wramAddress + 1) & 0x1FFFF;
@@ -185,7 +197,8 @@ class SnesBus implements Bus65816, DmaBus {
             return;
         }
         if (addr >= 0x40 && addr < 0x80) {
-            this.apuInputs[addr & 3] = data;
+            this.syncApu();
+            this.apu.cpuWrite(addr, data);
             return;
         }
         switch (addr) {

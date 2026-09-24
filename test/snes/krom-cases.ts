@@ -17,9 +17,14 @@ export interface KromCase {
     knownFailure?: string;
     // Compare only the main screen's columns of a hi-res screenshot
     mainScreenOnly?: boolean;
+    // Takes seconds, so only runs with SLOW_TESTS=1
+    slow?: boolean;
 }
 
 const cpu = (name: string, frames = 90): KromCase => ({ rom: `CPUTest/CPU/${name}/CPU${name}.sfc`, frames });
+// The main CPU uploads each test to the SPC700 through the IPL, and shows its results. The
+// SPC700 plays a sound and waits a second after each of its up to 28 tests.
+const spc700 = (name: string): KromCase => ({ rom: `CPUTest/SPC700/${name}/SPC700${name}.sfc`, frames: 2000, slow: true });
 const bank = (name: string): KromCase => ({ rom: `BANK/${name}/BANK${name}.sfc`, frames: 60 });
 // The main screen's columns match, but the sub screen's differ from bsnes's hi-res output, which
 // the emulator follows: the screenshots seem to come from an emulator that draws it differently
@@ -40,6 +45,7 @@ const BUTTON_R = 0x0010;
 export const KROM_CASES: KromCase[] = [
     ...['ADC', 'AND', 'ASL', 'BIT', 'BRA', 'CMP', 'DEC', 'EOR', 'INC', 'JMP', 'LDR', 'LSR', 'MOV',
         'MSC', 'ORA', 'PHL', 'PSR', 'RET', 'ROL', 'ROR', 'SBC', 'STR', 'TRN'].map(name => cpu(name)),
+    ...['ADC', 'AND', 'DEC', 'EOR', 'INC', 'ORA', 'SBC'].map(spc700),
     ...['HiROMFastROM', 'HiROMSlowROM', 'LoROMFastROM', 'LoROMSlowROM', 'WRAM'].map(bank),
     { rom: 'HelloWorld/HelloWorld.sfc', frames: 60 },
     { rom: 'PPU/BGMAP/8x8/2BPP/8x8BG1Map2BPP32x328PAL/8x8BG1Map2BPP32x328PAL.sfc', frames: 60 },

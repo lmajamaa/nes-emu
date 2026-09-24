@@ -71,7 +71,8 @@ partial requests), optionally with a different number of cases.
 
 `krom.bundle.gz` bundles krom's (Peter Lemon's) SNES test ROMs and demos, each with the
 reference screenshot next to it (see `test/snes/bundle.ts` for the format):
-the 65816 CPU tests (which print PASS or FAIL for every case), memory map tests, and PPU demos
+the 65816 and SPC700 CPU tests (which print PASS or FAIL for every case; the SPC700 ones take
+half a minute, so they only run with `SLOW_TESTS=1`), memory map tests, and PPU demos
 of backgrounds, color math, HDMA, mode 7, mosaic and windows. `test/snes/krom.test.ts` runs
 each one and compares the screen with its screenshot, the list is in `test/snes/krom-cases.ts`.
 `PPU/Mode7/Perspective/Perspective.png` is a BMP file despite its name.
@@ -79,3 +80,14 @@ each one and compares the screen with its screenshot, the list is in `test/snes/
 Source: https://github.com/PeterLemon/SNES. The repository doesn't state a license.
 
 Run `bun run fetch-krom-tests` to download them again.
+
+## `spc700/`
+
+`opcodes.json.gz` is a sample of Tom Harte's SPC700 SingleStepTests (the SNES sound CPU),
+100 cases per opcode, bundled like the 6502 sample with the cycle count instead of the
+per-cycle bus activity. SLEEP and STOP keep running for a few cycles after halting, so their
+cycle counts aren't checked, see `test/snes/spc700.singlestep.test.ts`.
+
+Source: https://github.com/SingleStepTests/spc700 (`v1`), MIT licensed, see `spc700/LICENSE`.
+
+Run `bun run fetch-spc700-tests [casesPerOpcode]` to download the sample again.

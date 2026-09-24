@@ -61,9 +61,10 @@ describe('SNES memory map', () => {
 
     test('APU ports are separate in each direction', () => {
         const bus = new SnesBus();
+        bus.reset();
         bus.write(0x002140, 0x12);
-        expect(bus.apuInputs[0]).toBe(0x12);
-        bus.apuOutputs[1] = 0xBB;
+        expect(bus.apu.inputs[0]).toBe(0x12);
+        bus.apu.outputs[1] = 0xBB;
         expect(bus.read(0x002141)).toBe(0xBB);
         // Mirrored up to $217F
         expect(bus.read(0x00217D)).toBe(0xBB);

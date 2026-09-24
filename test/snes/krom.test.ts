@@ -13,6 +13,9 @@ import { KROM_BUNDLE, KROM_CASES, referenceOf, type KromCase } from './krom-case
 
 // The screenshots come from emulators that convert colors from 5 to 8 bits slightly differently
 const TOLERANCE = 4;
+// Long running cases only compare now and then
+const LONG_RUN_FRAMES = 300;
+const LONG_RUN_COMPARE_EVERY = 10;
 
 const files = unpackBundle(readFileSync(KROM_BUNDLE));
 
@@ -58,6 +61,7 @@ function run(testCase: KromCase): void {
         snes.runFrame();
         // The STP test asks for a reset to show that it passed
         if (snes.cpu.stopped) snes.reset();
+        if (testCase.frames > LONG_RUN_FRAMES && frame % LONG_RUN_COMPARE_EVERY) continue;
         const differing = difference(snes, reference, testCase.mainScreenOnly);
         if (differing === 0) return;
         best = Math.min(best, differing);
@@ -70,6 +74,8 @@ describe("krom's SNES tests", () => {
         const name = testCase.rom.replace(/\.sfc$/, '');
         if (testCase.knownFailure) {
             test.failing(`${name} (${testCase.knownFailure})`, () => run(testCase));
+        } else if (testCase.slow) {
+            test.skipIf(!process.env.SLOW_TESTS)(name, () => run(testCase), 60000);
         } else {
             test(name, () => run(testCase));
         }

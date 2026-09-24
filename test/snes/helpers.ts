@@ -85,3 +85,25 @@ export function buildRom({ size = 0x100000, mapMode = 'LoROM', mapByte = 0x20, c
     return rom;
 }
 
+
+export const SINGLE_STEP_SPC700_TESTS = new URL('../data/spc700/opcodes.json.gz', import.meta.url);
+
+export interface Spc700State {
+    pc: number;
+    a: number;
+    x: number;
+    y: number;
+    sp: number;
+    psw: number;
+    ram: [addr: number, value: number][];
+}
+
+export interface Spc700Case {
+    name: string;
+    initial: Spc700State;
+    final: Spc700State;
+    cycles: number;
+}
+
+// { "00": [cases...], "01": [...], ... } keyed by opcode in hex
+export type Spc700Bundle = Record<string, Spc700Case[]>;
