@@ -10,7 +10,8 @@ import Spc700, { type SpcBus } from './spc700';
 // ticks, 1.025 MHz, and the DSP makes a sample every 32 SPC700 cycles
 const APU_CLOCK = 24_606_720;
 const SPC_CYCLE_TICKS = 24;
-const SPC_CYCLES_PER_MASTER_CYCLE = APU_CLOCK / SPC_CYCLE_TICKS / MASTER_CLOCK_NTSC;
+// The APU has its own crystal, so how it keeps up depends on the console's master clock
+const spcCyclesPerMasterCycle = (masterClock: number) => APU_CLOCK / SPC_CYCLE_TICKS / masterClock;
 const DSP_SAMPLE_CYCLES = 32;
 // Timers 0 and 1 count at 8 kHz, timer 2 at 64 kHz
 const TIMER_PERIODS = [128, 128, 16];
@@ -62,6 +63,7 @@ class Apu implements SpcBus {
 
     // Master cycles caught up to, and SPC700 cycles owed
     private masterCycles = 0;
+    private cyclesPerMasterCycle = spcCyclesPerMasterCycle(MASTER_CLOCK_NTSC);
     private budget = 0;
     private dspDivider = 0;
 
@@ -83,9 +85,14 @@ class Apu implements SpcBus {
         this.spc.reset();
     }
 
+    // The console's master clock, which is a little slower on PAL consoles
+    setMasterClock(hz: number): void {
+        this.cyclesPerMasterCycle = spcCyclesPerMasterCycle(hz);
+    }
+
     // Runs the APU up to the main CPU's time, in master cycles since power on
     catchUp(masterCycles: number): void {
-        this.budget += (masterCycles - this.masterCycles) * SPC_CYCLES_PER_MASTER_CYCLE;
+        this.budget += (masterCycles - this.masterCycles) * this.cyclesPerMasterCycle;
         this.masterCycles = masterCycles;
         while (this.budget > 0) this.budget -= this.runCycles(this.spc.step());
     }

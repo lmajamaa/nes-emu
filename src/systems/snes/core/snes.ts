@@ -1,6 +1,7 @@
 import SnesBus from './bus';
 import type SnesCartridge from './cartridge';
 import Cpu65816 from './cpu';
+import { CYCLES_PER_LINE, LINES_PER_FRAME, LINES_PER_FRAME_PAL, MASTER_CLOCK_NTSC, MASTER_CLOCK_PAL } from './io';
 
 // Addresses of the last instructions run, for the debugger
 const TRACE_LENGTH = 8;
@@ -14,6 +15,22 @@ class Snes {
 
     constructor(cartridge: SnesCartridge) {
         this.bus.cartridge = cartridge;
+        // The console's region follows the cartridge's, as games check it
+        this.bus.io.pal = cartridge.header.pal;
+        this.bus.apu.setMasterClock(this.masterClock);
+    }
+
+    get pal(): boolean {
+        return this.bus.io.pal;
+    }
+
+    get masterClock(): number {
+        return this.pal ? MASTER_CLOCK_PAL : MASTER_CLOCK_NTSC;
+    }
+
+    // Frames a second: 60.1 on NTSC, 50.0 on PAL
+    get frameRate(): number {
+        return this.masterClock / (CYCLES_PER_LINE * (this.pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME));
     }
 
     reset(): void {

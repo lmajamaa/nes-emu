@@ -15,6 +15,8 @@ export interface SnesHeader {
     romSize: number;
     sramSize: number;
     region: number;
+    // Made for 50 Hz PAL consoles, from the region
+    pal: boolean;
     version: number;
 }
 
@@ -93,6 +95,8 @@ function parseHeader(rom: Uint8Array, mapMode: MapMode): SnesHeader {
         romSize: 0x400 << byte(0x17),
         sramSize: sizeByte > 0 && sizeByte <= 0x09 ? 0x400 << sizeByte : 0,
         region: byte(0x19),
+        // Europe's countries, Hong Kong, Indonesia and Australia
+        pal: (byte(0x19) >= 0x02 && byte(0x19) <= 0x0C) || byte(0x19) === 0x11,
         version: byte(0x1B),
     };
 }

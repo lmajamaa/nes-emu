@@ -15,6 +15,7 @@ class Timing implements PpuTiming {
     overscan = false;
     interlace = false;
     field = 0;
+    pal = false;
 }
 
 let timing: Timing;

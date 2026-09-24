@@ -116,7 +116,9 @@ Each milestone ends with tests that run automatically, like the NES side.
 
 - Enhancement chips: DSP-1 (Super Mario Kart, Pilotwings), SuperFX (Star Fox, Yoshi's
   Island), SA-1 (Super Mario RPG).
-- Emulation in a Web Worker, PAL timing.
+- Emulation in a Web Worker.
+- PAL timing is done: the console's region follows the cartridge header, STAT78 reports it
+  (PAL games show a lockout screen otherwise), and a frame is 312 lines on the 21.28 MHz clock.
 
 ## Risks and decisions
 

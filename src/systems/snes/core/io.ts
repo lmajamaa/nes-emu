@@ -12,8 +12,10 @@ export interface PpuEvents {
 }
 
 export const MASTER_CLOCK_NTSC = 21_477_272;
+export const MASTER_CLOCK_PAL = 21_281_370;
 export const CYCLES_PER_LINE = 1364;
 export const LINES_PER_FRAME = 262;
+export const LINES_PER_FRAME_PAL = 312;
 const VBLANK_LINE = 225;
 const VBLANK_LINE_OVERSCAN = 240;
 // Once per line the CPU is paused while the work RAM refreshes
@@ -37,6 +39,8 @@ class CpuIo {
     interlace = false;
     // Alternates every frame
     field = 0;
+    // A 50 Hz PAL console, with 312 lines a frame and a longer vblank
+    pal = false;
 
     readonly controllers = [new SnesController(), new SnesController()];
     ppu: PpuEvents | null = null;
@@ -148,7 +152,8 @@ class CpuIo {
     private nextLine(): void {
         this.v++;
         // With interlace, the even field has an extra line
-        const lines = this.interlace && this.field === 0 ? LINES_PER_FRAME + 1 : LINES_PER_FRAME;
+        const frameLines = this.pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME;
+        const lines = this.interlace && this.field === 0 ? frameLines + 1 : frameLines;
         if (this.v === lines) {
             this.v = 0;
             this.frame++;

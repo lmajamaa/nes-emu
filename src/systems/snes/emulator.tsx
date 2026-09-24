@@ -7,7 +7,7 @@ import Snes from './core/snes';
 import Resampler from './resampler';
 import SnesDebugger from './ui/SnesDebugger';
 
-const FRAME_RATE = 21_477_272 / (1364 * 262);
+const NTSC_FRAME_RATE = 21_477_272 / (1364 * 262);
 
 // FNV-1a, to tell games apart for their saves
 function hashOf(data: Uint8Array): string {
@@ -22,7 +22,10 @@ function hashOf(data: Uint8Array): string {
 export class SnesEmulator implements Emulator {
     snes: Snes | null = null;
     saveId: string | null = null;
-    readonly frameRate = FRAME_RATE;
+    // 50 Hz for PAL games
+    get frameRate(): number {
+        return this.snes?.frameRate ?? NTSC_FRAME_RATE;
+    }
     private readonly resampler = new Resampler(DSP_SAMPLE_RATE);
     // Buttons held before a cartridge is in
     private readonly buttons = [0, 0];

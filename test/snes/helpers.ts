@@ -49,6 +49,8 @@ export interface RomOptions {
     chipset?: number;
     sramByte?: number;
     title?: string;
+    // 1 is USA, 2 Europe
+    region?: number;
     // Bytes to place at ROM offsets, like code and vectors
     patches?: Record<number, number[]>;
 }
@@ -56,7 +58,7 @@ export interface RomOptions {
 const HEADER: Record<MapMode, number> = { LoROM: 0x7FC0, HiROM: 0xFFC0, ExHiROM: 0x40FFC0 };
 
 // A ROM with distinct contents and a valid header, like an assembler would produce
-export function buildRom({ size = 0x100000, mapMode = 'LoROM', mapByte = 0x20, chipset = 0x00, sramByte = 0, title = 'TEST ROM', patches = {} }: RomOptions = {}): Uint8Array {
+export function buildRom({ size = 0x100000, mapMode = 'LoROM', mapByte = 0x20, chipset = 0x00, sramByte = 0, title = 'TEST ROM', region = 0x01, patches = {} }: RomOptions = {}): Uint8Array {
     const rom = new Uint8Array(size);
     for (let i = 0; i < size; i++) rom[i] = (i * 7 + (i >> 15)) & 0xFF;
 
@@ -66,7 +68,7 @@ export function buildRom({ size = 0x100000, mapMode = 'LoROM', mapByte = 0x20, c
     rom[h + 0x16] = chipset;
     rom[h + 0x17] = Math.log2(size / 0x400);
     rom[h + 0x18] = sramByte;
-    rom[h + 0x19] = 0x01;
+    rom[h + 0x19] = region;
     rom[h + 0x1B] = 0x00;
     rom[h + 0x3C] = 0x00;
     rom[h + 0x3D] = 0x80;

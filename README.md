@@ -12,7 +12,8 @@ runs the CPU, PPU (all background modes, sprites, color math, windows, mode 7, h
 interlace), DMA and sound, and games like Donkey Kong Country and Street Fighter II Turbo start
 up. Its debugger shows the CPU registers and disassembly, the PPU's state, palette, VRAM tiles and
 sprites, and the APU's voices. Battery-backed save RAM is kept in the browser (IndexedDB) between
-sessions. Enhancement chips like the SuperFX aren't emulated yet.
+sessions. European (PAL) games run as on a PAL console, at 50 Hz with its longer frame, as their
+cartridge header says. Enhancement chips like the SuperFX aren't emulated yet.
 
 ## Features
 

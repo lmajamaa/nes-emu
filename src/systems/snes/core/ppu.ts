@@ -17,6 +17,8 @@ export interface PpuTiming {
     interlace: boolean;
     // Alternates every frame, which interlace draws in the odd rows
     readonly field: number;
+    // A PAL console, which games check in STAT78
+    readonly pal: boolean;
 }
 
 // Layers, as used by the registers' bit order
@@ -267,7 +269,9 @@ class Ppu {
             case 0x3E:
                 return this.ppu1OpenBus = (this.timeOver ? 0x80 : 0) | (this.rangeOver ? 0x40 : 0) | (this.ppu1OpenBus & 0x10) | 0x01;
             case 0x3F: {
-                const data = (this.timing.field ? 0x80 : 0) | (this.countersLatched ? 0x40 : 0) | (this.ppu2OpenBus & 0x20) | 0x03;
+                // PAL games refuse to run unless bit 4 says the console is PAL, and NTSC ones the other way round
+                const data = (this.timing.field ? 0x80 : 0) | (this.countersLatched ? 0x40 : 0) | (this.ppu2OpenBus & 0x20) |
+                    (this.timing.pal ? 0x10 : 0) | 0x03;
                 this.countersLatched = false;
                 this.hCounterHigh = false;
                 this.vCounterHigh = false;
