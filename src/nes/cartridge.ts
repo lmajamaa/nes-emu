@@ -3,6 +3,8 @@ import type Mapper from './mappers/mapper';
 import Mapper_000 from './mappers/mapper_000';
 import Mapper_001 from './mappers/mapper_001';
 import Mapper_002 from './mappers/mapper_002';
+import Mapper_003 from './mappers/mapper_003';
+import Mapper_007 from './mappers/mapper_007';
 import Mapper_004 from './mappers/mapper_004';
 import Mapper_009 from './mappers/mapper_009';
 import { MIRROR, type Mirror } from './constants';
@@ -15,7 +17,7 @@ export interface ReadResult {
     data: number;
 }
 
-export const SUPPORTED_MAPPERS: readonly number[] = [0, 1, 2, 4, 9];
+export const SUPPORTED_MAPPERS: readonly number[] = [0, 1, 2, 3, 4, 7, 9];
 
 class Cartridge {
     readonly mapperId: number;
@@ -79,6 +81,12 @@ class Cartridge {
                 break;
             case 2:
                 this.pMapper = new Mapper_002(this.nPRGBanks, this.nCHRBanks);
+                break;
+            case 3:
+                this.pMapper = new Mapper_003(this.nPRGBanks, this.nCHRBanks);
+                break;
+            case 7:
+                this.pMapper = new Mapper_007(this.nPRGBanks, this.nCHRBanks);
                 break;
             case 4:
                 this.pMapper = new Mapper_004(this.nPRGBanks, this.nCHRBanks);

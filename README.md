@@ -24,7 +24,7 @@ sessions. Enhancement chips like the SuperFX aren't emulated yet.
   through the Web Audio API.
 - **Controllers**: player 1 on the keyboard.
 - **Cartridges**: iNES ROMs using mapper 0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3,
-  including its scanline IRQ) or 9 (MMC2), with PRG RAM and CHR RAM.
+  including its scanline IRQ), 7 (AxROM) or 9 (MMC2), with PRG RAM and CHR RAM.
 - **Debugger**: step one instruction or frame at a time, and see the CPU registers,
   disassembly around the program counter, RAM, palettes and pattern tables.
 
