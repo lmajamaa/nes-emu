@@ -119,6 +119,8 @@ class SnesCartridge {
     readonly rom: Uint8Array;
     readonly sram: Uint8Array;
     readonly header: SnesHeader;
+    // Set when the save RAM is written, for saving it
+    sramDirty = false;
 
     constructor(data: ArrayBuffer) {
         let rom = new Uint8Array(data);
@@ -156,7 +158,10 @@ class SnesCartridge {
     write(addr: number, data: number): boolean {
         const sram = this.sramOffset(addr);
         if (sram < 0) return false;
-        this.sram[sram] = data;
+        if (this.sram[sram] !== data) {
+            this.sram[sram] = data;
+            this.sramDirty = true;
+        }
         return true;
     }
 

@@ -1,6 +1,6 @@
 import type { EmulatorSystem } from '../types';
 import { SnesEmulator } from './emulator';
-import SnesLogo from './SnesLogo';
+import SnesLogo from './ui/SnesLogo';
 
 // Bits of a controller state, in the order the SNES reads them (B first)
 export const Button = {

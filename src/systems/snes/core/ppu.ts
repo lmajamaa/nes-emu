@@ -169,6 +169,28 @@ class Ppu {
 
     constructor(private readonly timing: PpuTiming) {}
 
+    // Registers the debugger shows
+    debugInfo() {
+        return {
+            mode: this.bgMode,
+            bg3Priority: this.bg3Priority,
+            forceBlank: this.forceBlank,
+            brightness: this.brightness,
+            mainScreen: this.mainScreen,
+            subScreen: this.subScreen,
+            colorMath: this.colorMath,
+            colorSelect: this.colorSelect,
+            fixedColor: this.fixedColor,
+            setini: this.setini,
+            bgScreenAddress: [...this.bgScreenAddress],
+            bgTileAddress: [...this.bgTileAddress],
+            bgHOffset: [...this.bgHOffset],
+            bgVOffset: [...this.bgVOffset],
+            objBaseSize: this.objBaseSize,
+            objTileBase: this.objTileBase,
+        };
+    }
+
     get height(): number {
         const lines = this.timing.overscan ? 239 : 224;
         return this.timing.interlace ? lines * 2 : lines;

@@ -25,6 +25,12 @@ export interface Emulator {
     // Interleaved left and right samples generated since the last call, at the rate given to setSampleRate
     takeSamples(): Float32Array;
 
+    // Battery-backed save RAM, which the shell keeps between sessions: an id for the game, set
+    // after load when it has battery RAM, restoring it, and taking it when it changed
+    readonly saveId?: string | null;
+    loadSave?(data: Uint8Array): void;
+    takeSave?(): Uint8Array | null;
+
     // Keys the system handles itself, like stepping one instruction. Returns true if handled.
     handleDebugKey?(code: string): boolean;
     // Lays out its views around the screen, which it gets as children. Re-rendered while the emulator runs.

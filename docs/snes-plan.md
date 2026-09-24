@@ -159,4 +159,8 @@ Each milestone ends with tests that run automatically, like the NES side.
   512-wide frame, follows the height (overscan, interlace), and resamples the DSP's stereo to
   the browser's rate (the audio output is stereo, the NES sends its mono sound to both
   channels). Donkey Kong Country and Street Fighter II Turbo start up and play their music
-- [ ] 8. Debugger and saves
+- [x] 8. Debugger and saves. The debugger shows the registers with E, M and X, the last and next
+  instructions (decoded from the PC, following REP and SEP), the PPU's mode, layers and
+  addresses, CGRAM, VRAM as 2, 4 or 8bpp tiles, the sprites on screen, and the APU's voices; C
+  steps one instruction. Battery-backed SRAM is stored in IndexedDB by a hash of the ROM,
+  restored before the game runs and saved within a second of changing, and when the page is left

@@ -9,7 +9,8 @@ const PatternTable = ({ patternTable }: { patternTable: Sprite }) => {
         const context = canvas?.getContext('2d');
         if (!canvas || !context) return;
 
-        const canvasData = context.getImageData(0, 0, canvas.width, canvas.height);
+        // Every pixel is drawn, so a new image does without reading the canvas back
+        const canvasData = context.createImageData(canvas.width, canvas.height);
         for (let x = 0; x < patternTable.width; x++) {
             for (let y = 0; y < patternTable.height; y++) {
                 const pixel = patternTable.getPixel(x, y);

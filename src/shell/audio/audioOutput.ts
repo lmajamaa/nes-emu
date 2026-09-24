@@ -1,5 +1,6 @@
 import workletUrl from './apuWorklet.ts?worker&url';
 
+// The gain at full volume
 const VOLUME = 1.5;
 
 class AudioOutput {
@@ -7,6 +8,8 @@ class AudioOutput {
     private node: AudioWorkletNode | null = null;
     private gain: GainNode | null = null;
     private muted = false;
+    // 0 to 1
+    private volume = 1;
 
     get sampleRate(): number | null {
         return this.context?.sampleRate ?? null;
@@ -32,7 +35,7 @@ class AudioOutput {
         await context.audioWorklet.addModule(workletUrl);
         const node = new AudioWorkletNode(context, 'apu-output', { outputChannelCount: [2] });
         const gain = context.createGain();
-        gain.gain.value = this.muted ? 0 : VOLUME;
+        gain.gain.value = this.level;
         node.connect(gain).connect(context.destination);
         this.node = node;
         this.gain = gain;
@@ -50,9 +53,18 @@ class AudioOutput {
         this.node?.port.postMessage('clear');
     }
 
+    private get level(): number {
+        return this.muted ? 0 : this.volume * VOLUME;
+    }
+
+    setVolume(volume: number): void {
+        this.volume = Math.min(1, Math.max(0, volume));
+        if (this.gain) this.gain.gain.value = this.level;
+    }
+
     setMuted(muted: boolean): void {
         this.muted = muted;
-        if (this.gain) this.gain.gain.value = muted ? 0 : VOLUME;
+        if (this.gain) this.gain.gain.value = this.level;
     }
 }
 

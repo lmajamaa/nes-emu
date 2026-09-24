@@ -95,6 +95,15 @@ class SnesBus implements Bus65816, DmaBus {
         this.apuSyncAt = this.cycles + CYCLES_PER_LINE;
     }
 
+    // Reads without side effects or time passing, for the debugger. I/O reads as 0.
+    peek(addr: number): number {
+        const bank = addr >> 16;
+        const offset = addr & 0xFFFF;
+        if ((bank & 0x40) === 0 && offset >= 0x2000 && offset < 0x6000) return 0;
+        const data = this.readRaw(addr);
+        return data >= 0 ? data : 0;
+    }
+
     // A-bus and B-bus access for DMA, which takes its own time
     readA(addr: number): number {
         const data = this.readRaw(addr);

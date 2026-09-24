@@ -264,3 +264,174 @@ h4 {
   font-size: 13px;
   color: #C8A9BC;
 }
+
+.snesPanel {
+  margin-top: 12px;
+}
+
+.snesButtons {
+  display: flex;
+  gap: 8px;
+  margin: 12px 24px 0;
+}
+
+.codeArea code.recent {
+  opacity: 0.55;
+}
+
+.voices {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 20px;
+}
+
+.voiceBars {
+  flex: none;
+}
+
+.screen {
+  display: flex;
+  align-self: flex-start;
+}
+
+/* The screen with its controls over the bottom edge, like a video player */
+.player {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+}
+
+.player.idle {
+  cursor: none;
+}
+
+.controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 32px 8px 4px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.player:hover .controls,
+.player:focus-within .controls,
+.controls.paused {
+  opacity: 1;
+}
+
+.player.idle .controls {
+  opacity: 0;
+}
+
+.controlsSpacer {
+  flex: 1;
+}
+
+/* The volume slider pops up above the sound button */
+.volume {
+  position: relative;
+  display: flex;
+}
+
+.volumePopup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  display: flex;
+  justify-content: center;
+  padding: 10px 6px;
+  background-color: rgba(0, 0, 0, 0.75);
+  border-radius: 6px;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.volume:hover .volumePopup,
+.volume:focus-within .volumePopup {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Upright, with the bottom as the minimum */
+.volumeSlider {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 20px;
+  height: 84px;
+  margin: 0;
+  accent-color: #FFFFFF;
+  cursor: pointer;
+}
+
+.controlButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 36px;
+  padding: 0;
+  color: #FFFFFF;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.controlButton:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.controlButton:focus-visible {
+  outline: 2px solid goldenrod;
+}
+
+/* Theater mode: a black band across the page, the screen as tall as the window allows */
+.screen.theater {
+  align-self: stretch;
+  justify-content: center;
+  margin: 0 -24px 16px;
+  background-color: #000;
+}
+
+.screen.theater #emulationCanvas {
+  border: none;
+  width: auto;
+  height: min(calc(100vh - 140px), calc((100vw - 20px) * 3 / 4));
+  aspect-ratio: 4 / 3;
+}
+
+/* Full screen: as large as fits, on black */
+.screen:fullscreen {
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  background-color: #000;
+}
+
+.screen:fullscreen #emulationCanvas {
+  border: none;
+  width: min(100vw, calc(100vh * 4 / 3));
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+
+.screen.theater #emulationCanvas,
+.screen:fullscreen #emulationCanvas {
+  image-rendering: pixelated;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
