@@ -156,7 +156,7 @@ Each milestone ends with tests that run automatically, like the NES side.
   every other one, and decodes BRR a block at a time; its 32 kHz stereo output still has to be
   resampled for the browser in milestone 7
 - [x] 7. Controllers and adapter. `SnesEmulator` in `src/systems/snes/emulator.ts` draws the
-  512-wide frame, follows the height (overscan, interlace), and resamples the DSP to the
-  browser's rate as mono; stereo needs `AudioOutput` to take two channels. Donkey Kong Country
-  and Street Fighter II Turbo start up and play their music
+  512-wide frame, follows the height (overscan, interlace), and resamples the DSP's stereo to
+  the browser's rate (the audio output is stereo, the NES sends its mono sound to both
+  channels). Donkey Kong Country and Street Fighter II Turbo start up and play their music
 - [ ] 8. Debugger and saves

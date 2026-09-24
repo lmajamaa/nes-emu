@@ -30,7 +30,7 @@ class AudioOutput {
         const context = new AudioContext({ latencyHint: 'interactive' });
         this.context = context;
         await context.audioWorklet.addModule(workletUrl);
-        const node = new AudioWorkletNode(context, 'apu-output', { outputChannelCount: [1] });
+        const node = new AudioWorkletNode(context, 'apu-output', { outputChannelCount: [2] });
         const gain = context.createGain();
         gain.gain.value = this.muted ? 0 : VOLUME;
         node.connect(gain).connect(context.destination);
@@ -38,6 +38,7 @@ class AudioOutput {
         this.gain = gain;
     }
 
+    // Interleaved left and right samples
     push(samples: Float32Array): void {
         if (this.node && samples.length > 0) {
             this.node.port.postMessage(samples, [samples.buffer]);

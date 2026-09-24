@@ -63,8 +63,12 @@ export class NesEmulator implements Emulator {
         this.bus.apu.setSampleRate(sampleRate);
     }
 
+    // The NES is mono, so both channels get the same
     takeSamples(): Float32Array {
-        return this.bus.apu.takeSamples();
+        const mono = this.bus.apu.takeSamples();
+        const stereo = new Float32Array(mono.length * 2);
+        for (let i = 0; i < mono.length; i++) stereo[i * 2] = stereo[i * 2 + 1] = mono[i];
+        return stereo;
     }
 
     handleDebugKey(code: string): boolean {

@@ -22,7 +22,7 @@ export interface Emulator {
     setButton(player: number, button: number, pressed: boolean): void;
 
     setSampleRate(sampleRate: number): void;
-    // Mono samples generated since the last call, at the rate given to setSampleRate
+    // Interleaved left and right samples generated since the last call, at the rate given to setSampleRate
     takeSamples(): Float32Array;
 
     // Keys the system handles itself, like stepping one instruction. Returns true if handled.

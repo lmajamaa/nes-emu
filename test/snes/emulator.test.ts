@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
+import nes from '../../src/systems/nes';
 import snes, { Button } from '../../src/systems/snes';
 import { SnesEmulator } from '../../src/systems/snes/emulator';
 import Resampler from '../../src/systems/snes/resampler';
@@ -56,7 +57,7 @@ describe('SNES emulator adapter', () => {
         expect(emulator.snes!.bus.io.controllers[0].buttons).toBe(Button.A);
     });
 
-    test('makes a frame of sound per frame at the output rate', () => {
+    test('makes a frame of stereo sound per frame at the output rate', () => {
         const emulator = loaded();
         emulator.setSampleRate(48000);
         // Its start up clears work RAM with DMAs longer than a frame
@@ -67,7 +68,7 @@ describe('SNES emulator adapter', () => {
         let samples = 0;
         for (let i = 0; i < 60; i++) {
             emulator.runFrame();
-            samples += emulator.takeSamples().length;
+            samples += emulator.takeSamples().length / 2;
         }
         expect(Math.abs(samples - 48000 * 60 / emulator.frameRate)).toBeLessThan(10);
     });
@@ -76,18 +77,18 @@ describe('SNES emulator adapter', () => {
 describe('SNES resampler', () => {
     const stereo = (values: number[]) => Int16Array.from(values.flatMap(v => [v, v]));
 
-    test('averages left and right into -1 to 1', () => {
+    test('keeps the channels apart, scaled to -1 to 1', () => {
         const resampler = new Resampler(1000);
         resampler.setOutputRate(1000);
-        const output = resampler.resample(Int16Array.from([16384, 0, -32768, -32768, 0, 0]));
-        expect(Array.from(output)).toEqual([0.25, -1]);
+        const output = resampler.resample(Int16Array.from([16384, 0, -32768, 8192, 0, 0]));
+        expect(Array.from(output)).toEqual([0.5, 0, -1, 0.25]);
     });
 
     test('interpolates between samples when upsampling', () => {
         const resampler = new Resampler(1000);
         resampler.setOutputRate(2000);
-        const output = resampler.resample(stereo([0, 16384, 0]));
-        expect(Array.from(output)).toEqual([0, 0.25, 0.5, 0.25]);
+        const output = resampler.resample(Int16Array.from([0, 0, 16384, -16384, 0, 0]));
+        expect(Array.from(output)).toEqual([0, 0, 0.25, -0.25, 0.5, -0.5, 0.25, -0.25]);
     });
 
     test('keeps its position across blocks', () => {
@@ -102,5 +103,20 @@ describe('SNES resampler', () => {
         const joined = [...parts[0], ...parts[1]];
         expect(joined.length).toBe(whole.length);
         joined.forEach((value, i) => expect(value).toBeCloseTo(whole[i], 6));
+    });
+});
+
+describe('NES emulator adapter sound', () => {
+    test('puts the mono sound in both channels', () => {
+        const emulator = nes.create!();
+        emulator.load(new Uint8Array(readFileSync(new URL('../data/nestest/nestest.nes', import.meta.url))).buffer);
+        emulator.setSampleRate(48000);
+        emulator.runFrame();
+        emulator.takeSamples();
+        emulator.runFrame();
+        const samples = emulator.takeSamples();
+        expect(samples.length % 2).toBe(0);
+        expect(Math.abs(samples.length / 2 - 48000 / emulator.frameRate)).toBeLessThan(2);
+        for (let i = 0; i < samples.length; i += 2) expect(samples[i + 1]).toBe(samples[i]);
     });
 });
