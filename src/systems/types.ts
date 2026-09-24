@@ -7,6 +7,7 @@ export interface LoadResult {
 
 // A running console, as the shell sees it. Each system adapts its own core to this.
 export interface Emulator {
+    // Of the frame drawFrame draws, which can change between frames
     readonly width: number;
     readonly height: number;
     readonly frameRate: number;

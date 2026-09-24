@@ -49,12 +49,19 @@ const App = () => {
 
     const drawScreen = useCallback(() => {
         const emulator = gameRef.current?.emulator;
-        const context = canvasRef.current?.getContext('2d');
-        if (!emulator || !context) return;
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext('2d');
+        if (!emulator || !canvas || !context) return;
 
+        // The frame's size can change as the game runs, like the SNES with interlace
+        const { width, height } = emulator;
+        if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+        }
         let frame = frameRef.current;
-        if (frame?.width !== emulator.width || frame.height !== emulator.height) {
-            frame = frameRef.current = context.createImageData(emulator.width, emulator.height);
+        if (frame?.width !== width || frame.height !== height) {
+            frame = frameRef.current = context.createImageData(width, height);
         }
         emulator.drawFrame(frame);
         context.putImageData(frame, 0, 0);

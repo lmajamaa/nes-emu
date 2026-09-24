@@ -1,4 +1,5 @@
 import type { EmulatorSystem } from '../types';
+import { SnesEmulator } from './emulator';
 import SnesLogo from './SnesLogo';
 
 // Bits of a controller state, in the order the SNES reads them (B first)
@@ -38,6 +39,7 @@ const snes: EmulatorSystem = {
         ArrowRight: Button.Right,
     },
     controlsHelp: 'Arrows = D-pad    X = A    Z = B    S = X    A = Y    Q = L    W = R    Right Shift = Select    Enter = Start',
+    create: () => new SnesEmulator(),
 };
 
 export default snes;
