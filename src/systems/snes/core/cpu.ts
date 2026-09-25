@@ -276,7 +276,13 @@ class Cpu65816 {
                     this.idle();
                     offset += this.x;
                 }
-                const pointer = this.read(this.directAddress(offset)) | (this.read(this.directAddress(offset + 1)) << 8);
+                const low = this.directAddress(offset);
+                // Undocumented: in emulation mode with the direct page not page aligned, (dp,X) reads
+                // the pointer's high byte from the same page as its low byte
+                const high = mode === DPXIND && this.e && (this.d & 0xFF) !== 0
+                    ? (low & 0xFF00) | ((low + 1) & 0xFF)
+                    : this.directAddress(offset + 1);
+                const pointer = this.read(low) | (this.read(high) << 8);
                 if (mode === DPINDY) {
                     if (write) this.idle(); else this.idleIndexed(pointer, pointer + this.y);
                     this.linear((this.dbr << 16) + pointer + this.y);

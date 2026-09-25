@@ -342,9 +342,6 @@ const App = () => {
                 case 'KeyR':
                     resetGame();
                     break;
-                case 'KeyD':
-                    setDocsOpen(true);
-                    return;
                 default:
                     return;
             }
@@ -357,7 +354,7 @@ const App = () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleControllerKey);
         };
-    }, [drawScreen, toggleMute, toggleRun, stepFrame, resetGame, toggleTheater, setDocsOpen]);
+    }, [drawScreen, toggleMute, toggleRun, stepFrame, resetGame, toggleTheater]);
 
     useEffect(() => {
         let lastDebugUpdate = 0;
@@ -431,7 +428,7 @@ const App = () => {
     );
     const help = game && (
         <>
-            <code className="instructions">SPACE = Run/Pause    F = Step Frame    R = Reset    M = Mute    T = Theater mode    D = Docs</code>
+            <code className="instructions">SPACE = Run/Pause    F = Step Frame    R = Reset    M = Mute    T = Theater mode</code>
             <code className="instructions">Controller: {game.system.controlsHelp}</code>
             <code className="instructions">Click the screen to run or pause, double-click for full screen</code>
         </>

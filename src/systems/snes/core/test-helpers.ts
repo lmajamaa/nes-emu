@@ -1,7 +1,27 @@
-import type { MapMode } from './cartridge';
+import { readFileSync } from 'node:fs';
+import SnesCartridge, { type MapMode } from './cartridge';
 import type { Bus65816 } from './cpu';
+import Snes from './snes';
 
 export const SINGLE_STEP_65816_TESTS = new URL(import.meta.resolve('@test/fixtures/65816/opcodes.json.gz'));
+
+// gilyon's test ROMs, which ship with the app, see public/roms/LICENSES.md
+export const CPU_TEST_ROM = new URL('../../../../public/roms/cputest-full.sfc', import.meta.url);
+export const SPC_TEST_ROM = new URL('../../../../public/roms/spctest.sfc', import.meta.url);
+
+// Runs one of gilyon's test ROMs until it shows its result, and returns the screen's text.
+// They write ASCII straight into the tilemap: "Success", or "Failed" with the test number and registers.
+export function runGilyonTest(rom: URL, maxFrames = 600): string[] {
+    const snes = new Snes(new SnesCartridge(new Uint8Array(readFileSync(rom)).buffer));
+    snes.reset();
+    const row = (index: number) => Array.from(snes.bus.ppu.vram.subarray(index * 32, index * 32 + 32),
+        word => (word & 0xFF) >= 0x20 && (word & 0xFF) < 0x7F ? String.fromCharCode(word & 0xFF) : ' ').join('').trim();
+    for (let frame = 0; frame < maxFrames && !/Success|Failed/.test(row(1)); frame++) {
+        snes.runFrame();
+        snes.bus.syncApu();
+    }
+    return Array.from({ length: 12 }, (_, index) => row(index)).filter(Boolean);
+}
 
 export interface Snes65816State {
     pc: number;

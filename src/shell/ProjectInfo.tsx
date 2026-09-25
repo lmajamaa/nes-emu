@@ -12,7 +12,7 @@ const GitHubIcon = () => (
 const ProjectInfo = ({ onOpenDocs }: { onOpenDocs: () => void }) => (
     <>
         <span className="appVersion" title="Version">v{version}</span>
-        <button className="headerIcon" aria-label="Documentation (D)" title="Documentation (D)" onClick={onOpenDocs}>
+        <button className="headerIcon" aria-label="Documentation" title="Documentation" onClick={onOpenDocs}>
             <DocsIcon />
         </button>
         <a className="headerIcon" href={repository.url} target="_blank" rel="noreferrer" aria-label="Source on GitHub" title="Source on GitHub">

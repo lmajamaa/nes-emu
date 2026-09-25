@@ -2,7 +2,7 @@
 // CPU: each case sets up registers and RAM, executes one instruction and checks registers, RAM
 // and the cycle count.
 
-import { describe, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import Cpu65816, { MNEMONICS } from './cpu';
@@ -60,6 +60,17 @@ function runCase(testCase: Snes65816Case): string[] {
     return errors;
 }
 
+// The tests were checked on a WDC 65C816, and the SNES's 5A22 differs in one undocumented case, found
+// on a real SNES by gilyon's snes-tests: in emulation mode with the direct page not page aligned,
+// (dp,X) reads the pointer's high byte from the same page as its low byte. Those cases are left out.
+const DP_X_INDIRECT = new Set([0x01, 0x21, 0x41, 0x61, 0x81, 0xA1, 0xC1, 0xE1]);
+
+function differsOnSnes(opcode: number, { initial }: Snes65816Case): boolean {
+    if (!DP_X_INDIRECT.has(opcode) || initial.e !== 1 || (initial.d & 0xFF) === 0) return false;
+    const operand = new Map(initial.ram).get((initial.pbr << 16) | ((initial.pc + 1) & 0xFFFF)) ?? 0;
+    return ((initial.d + operand + (initial.x & 0xFF)) & 0xFF) === 0xFF;
+}
+
 // { "00.e": [cases...], "00.n": [...], ... }
 const bundle: Snes65816Bundle = JSON.parse(gunzipSync(readFileSync(SINGLE_STEP_65816_TESTS)).toString());
 
@@ -72,6 +83,7 @@ describe('65816 SingleStepTests', () => {
         test(`${fmt(opcode)} ${MNEMONICS[opcode]} ${mode === 'e' ? 'emulation' : 'native'}`, () => {
             const failures = [];
             for (const testCase of cases) {
+                if (differsOnSnes(opcode, testCase)) continue;
                 let errors;
                 try {
                     errors = runCase(testCase);
@@ -90,4 +102,30 @@ describe('65816 SingleStepTests', () => {
             }
         });
     }
+});
+
+describe('65816 on the SNES', () => {
+    // Test 0027 of gilyon's cputest: ADC ($F7,X) with D=$011A and X=$EE reads the pointer from $02FF and $0200
+    test('(dp,X) in emulation mode reads the pointer within one page when the direct page is not aligned', () => {
+        const cpu = new Cpu65816(bus);
+        cpu.e = true;
+        cpu.setP(0x21);
+        cpu.a = 0x1112;
+        cpu.x = 0xEE;
+        cpu.d = 0x011A;
+        cpu.dbr = 0x7F;
+        cpu.pbr = 0;
+        cpu.pc = 0x8000;
+        bus.ram.set([0x61, 0xF7], 0x8000);
+        bus.ram[0x02FF] = 0x34;
+        bus.ram[0x0200] = 0x12;
+        bus.ram[0x0300] = 0x56;
+        bus.ram[0x7F1234] = 0xED;
+
+        cpu.step();
+
+        expect(cpu.a).toBe(0x1100);
+        expect(cpu.getP()).toBe(0x33);
+        for (const addr of [0x8000, 0x8001, 0x02FF, 0x0200, 0x0300, 0x7F1234]) bus.ram[addr] = 0;
+    });
 });

@@ -6,7 +6,8 @@ the plan it was built by.
 ## Features
 
 - **CPU**: the 65816 in emulation and native mode, with the cycle count of each instruction and
-  the memory speed of each region, FastROM included.
+  the memory speed of each region, FastROM included. Passes gilyon's `cputest-full`, which
+  covers the undocumented behavior of the SNES's CPU, and its `spctest` for the sound CPU.
 - **PPU**: all background modes, sprites, color math, windows, mode 7, mosaic, hi-res and
   interlace.
 - **DMA**: general DMA and HDMA on all 8 channels.
@@ -162,7 +163,11 @@ Each milestone ends with tests that run automatically, like the NES side.
 ## Progress
 
 - [x] 1. Cartridge
-- [x] 2. 65816 CPU (SingleStepTests)
+- [x] 2. 65816 CPU (SingleStepTests, and gilyon's `cputest-full`). The SNES's CPU is Ricoh's
+  5A22, and in one undocumented case it differs from the WDC 65C816 the SingleStepTests were
+  checked on: in emulation mode with the direct page not page aligned, (dp,X) reads the
+  pointer's high byte from the same page as its low byte. The emulator follows the SNES, and the
+  two SingleStepTests cases that hit it are left out
 - [x] 3. Bus, timing and CPU registers (multiply/divide results are ready at once instead of
   after 8/16 CPU cycles; latching the H/V counters waits for the PPU)
 - [x] 4. DMA and HDMA (timing is 8 master cycles per byte plus fixed overheads, without the

@@ -17,7 +17,7 @@ started in 2019 following javidx9's [NES emulator series](https://github.com/One
 
 Both have a debugger next to the screen, and keep games' battery-backed saves in the browser
 (IndexedDB) between sessions. The documents in `docs/` can also be read in the app, from the docs
-icon in the top right corner or with **D**. Each has its own address, like
+icon in the top right corner. Each has its own address, like
 `#/docs/docs/nes.md#progress`, to link to.
 
 ## Getting started
@@ -32,7 +32,9 @@ bun run dev
 Then open http://localhost:3000. The emulator starts running the `nestest` test ROM, and
 **Space** pauses it. Click the console logo to pick another game, which starts playing right
 away, or **Open ROM file…** to load a `.nes`, `.sfc` or `.smc` file from your computer. ROMs are read in the browser and not uploaded
-anywhere. Only publicly available user-made ROMs are included, like `nestest.nes`.
+anywhere. Only publicly available user-made ROMs are included: the `nestest` CPU test for the
+NES, and for the SNES the homebrew Memory Game and gilyon's CPU and sound CPU tests. See
+[public/roms/LICENSES.md](public/roms/LICENSES.md) for their authors and licenses.
 
 The screen has controls over its bottom edge, like a video player: run and pause, step a frame,
 reset, sound with a volume slider that pops up above it on hover (remembered), theater mode (the screen
@@ -61,7 +63,6 @@ the user interacts with them.
 | R | Reset the console |
 | M | Mute / unmute |
 | T | Theater mode |
-| D | Documentation |
 | C | Step one instruction |
 | I / N | Trigger an IRQ / NMI (NES) |
 | P | Cycle the palette used by the pattern table view (NES) |
@@ -92,8 +93,9 @@ A few tests are marked as known failures, which turn red if they start passing: 
 that needs a cycle-accurate CPU, one for a different MMC3 chip revision, and the unstable `LXA`
 opcode, whose result depends on the chip and differs between the SingleStepTests and the NES.
 - **Unit tests** for the PPU, sprites, APU channels, controllers and mappers.
-- **SNES** (see [docs/snes.md](docs/snes.md)): Tom Harte's 65816 and SPC700
-  SingleStepTests, and unit tests of the cartridge, bus, timing, DMA, PPU, APU and DSP.
+- **SNES** (see [docs/snes.md](docs/snes.md)): gilyon's test ROMs of the 65C816 and SPC-700,
+  Tom Harte's 65816 and SPC700 SingleStepTests, and unit tests of the cartridge, bus, timing,
+  DMA, PPU, APU and DSP.
 
 CI runs the type check, the tests and the build on every push to `main` and on pull requests.
 Publishing a release deploys the app to GitHub Pages, under `/<repository>/`.
@@ -124,12 +126,15 @@ Tests sit next to the code they test as `*.test.ts`, with shared test code in `t
 - The [NESdev wiki](https://www.nesdev.org/wiki/), for most of the hardware details.
 - Test ROMs and data by kevtris (nestest), Tom Harte (SingleStepTests for the [6502](https://github.com/SingleStepTests/65x02)
   and [65816](https://github.com/SingleStepTests/65816)) and blargg (Shay Green), via
-  [christopherpow/nes-test-roms](https://github.com/christopherpow/nes-test-roms).
+  [christopherpow/nes-test-roms](https://github.com/christopherpow/nes-test-roms), and
+  gilyon ([snes-tests](https://github.com/gilyon/snes-tests)).
+- [Memory Game](https://github.com/undisbeliever/memory-game) by The UnDisbeliever.
 
 ## License
 
-[MIT](LICENSE), for the emulator's own code. The test ROMs and test data in `test/fixtures` belong
-to their authors and keep their own terms, see [test/fixtures/README.md](test/fixtures/README.md).
+[MIT](LICENSE), for the emulator's own code. The ROMs in `public/roms` and the test data in
+`test/fixtures` belong to their authors and keep their own terms, see
+[public/roms/LICENSES.md](public/roms/LICENSES.md) and [test/fixtures/README.md](test/fixtures/README.md).
 
 ## Trademarks
 

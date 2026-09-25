@@ -22,5 +22,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Your own ROMs, apart from the freely licensed ones that ship with the app, see public/roms/LICENSES.md
 /public/roms/*
 !/public/roms/nestest.nes
+!/public/roms/Memory Game (v1.02).sfc
+!/public/roms/cputest-full.sfc
+!/public/roms/spctest.sfc
+!/public/roms/LICENSES.md
