@@ -2,43 +2,23 @@
 
 [![CI](https://github.com/lmajamaa/nes-emu/actions/workflows/ci.yml/badge.svg)](https://github.com/lmajamaa/nes-emu/actions/workflows/ci.yml)
 
-An emulator for the Nintendo Entertainment System (NES) that runs in the browser, written in TypeScript
-with a React debugger UI. It started in 2019 following javidx9's [NES emulator series](https://github.com/OneLoneCoder/olcNES) but was forgotten. Implementation was restarted in 2026, adding controllers, more cartridge mappers and a test suite built on well-known NES test ROMs.
+An emulator for the Nintendo Entertainment System (NES) and the Super Nintendo Entertainment
+System (SNES) that runs in the browser, written in TypeScript with a React debugger UI. It
+started in 2019 following javidx9's [NES emulator series](https://github.com/OneLoneCoder/olcNES) but wasn't fully completed. Implementation was restarted in September 2026, adding controllers, more cartridge mappers, the full SNES implementation and a test suite built on well-known test ROMs.
 
-It can run official games like Super Mario Bros., Super Mario Bros. 2 and 3, Donkey Kong, Bubble Bobble, Mike Tyson's Punch-Out!! and DuckTales 1 and 2.
+## Consoles
 
-Super Nintendo (SNES) emulation is in progress, see [docs/snes-plan.md](docs/snes-plan.md). It
-runs the CPU, PPU (all background modes, sprites, color math, windows, mode 7, hi-res and
-interlace), DMA and sound, and games like Donkey Kong Country and Street Fighter II Turbo start
-up. Its debugger shows the CPU registers and disassembly, the PPU's state, palette, VRAM tiles and
-sprites, and the APU's voices. Battery-backed save RAM is kept in the browser (IndexedDB) between
-sessions. European (PAL) games run as on a PAL console, at 50 Hz with its longer frame, as their
-cartridge header says. Enhancement chips like the SuperFX aren't emulated yet.
+- **NES**: the 6502 CPU, the PPU, all five sound channels and the common cartridge boards
+  (mappers 0, 1, 2, 3, 4, 7 and 9). See [docs/nes.md](docs/nes.md) for the details, what's
+  missing and the plan.
+- **SNES**: the 65816 CPU, the PPU with all background modes and mode 7, DMA and HDMA, and the
+  SPC700 and DSP for sound. Cartridges with enhancement chips aren't supported yet. See
+  [docs/snes.md](docs/snes.md) for the details.
 
-## Features
-
-- **CPU**: the 6502 (2A03) with all 256 opcodes, including the unofficial ones, and correct
-  cycle counts per instruction.
-- **PPU**: backgrounds with scrolling, 8x8 and 8x16 sprites with flipping and priority,
-  sprite zero hit and sprite overflow, and nametable mirroring.
-- **APU**: both pulse channels, triangle, noise and DMC, the frame counter and its IRQ, played
-  through the Web Audio API.
-- **Controllers**: player 1 on the keyboard.
-- **Cartridges**: iNES ROMs using mapper 0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3,
-  including its scanline IRQ), 7 (AxROM) or 9 (MMC2), with PRG RAM and CHR RAM. Battery-backed
-  PRG RAM is kept in the browser (IndexedDB) between sessions, for games like The Legend of Zelda.
-- **Debugger**: step one instruction or frame at a time, and see the CPU registers,
-  disassembly around the program counter, RAM, palettes and pattern tables.
-- **Docs**: the documents in `docs/` can be read in the app, from the docs icon in the top right
-  corner or with **D**. Each has its own address, like `#/docs/docs/nes-plan.md#milestones`, to link to.
-
-### Not supported (yet)
-
-- Cycle-accurate CPU timing: instructions run all at once on their first cycle, so memory
-  accesses within an instruction happen a few cycles early. Games don't notice, but a few
-  timing test ROMs do.
-- Other mappers. ROMs with an unsupported mapper load as mapper 0, with a warning.
-- A second controller, PAL timing and save states.
+Both have a debugger next to the screen, and keep games' battery-backed saves in the browser
+(IndexedDB) between sessions. The documents in `docs/` can also be read in the app, from the docs
+icon in the top right corner or with **D**. Each has its own address, like
+`#/docs/docs/nes.md#progress`, to link to.
 
 ## Getting started
 
@@ -52,13 +32,11 @@ bun run dev
 Then open http://localhost:3000. The emulator starts running the `nestest` test ROM, and
 **Space** pauses it. Click the console logo to pick another game, which starts playing right
 away, or **Open ROM file…** to load a `.nes`, `.sfc` or `.smc` file from your computer. ROMs are read in the browser and not uploaded
-anywhere. No games are included, but ROMs you put in `public/roms` (git ignored, apart from
-`nestest.nes`) are listed in the menu, grouped by console.
+anywhere. Only publicly available user-made ROMs are included, like `nestest.nes`.
 
 The screen has controls over its bottom edge, like a video player: run and pause, step a frame,
 reset, sound with a volume slider that pops up above it on hover (remembered), theater mode (the screen
-across the page, with the debugger below it, remembered) and full screen. Clicking the screen runs or pauses it, double-clicking goes full screen, and the
-controls hide while the game runs and the mouse is still.
+across the page, with the debugger below it, remembered) and full screen. Clicking the screen runs or pauses it, double-clicking goes full screen, and the controls hide while the game runs and the mouse is still.
 
 Sound starts with your first click or key press, as browsers don't let pages play audio before
 the user interacts with them.
@@ -115,7 +93,7 @@ A few tests are marked as known failures, which turn red if they start passing: 
 that needs a cycle-accurate CPU, one for a different MMC3 chip revision, and the unstable `LXA`
 opcode, whose result depends on the chip and differs between the SingleStepTests and the NES.
 - **Unit tests** for the PPU, sprites, APU channels, controllers and mappers.
-- **SNES** (in progress, see `docs/snes-plan.md`): Tom Harte's 65816 and SPC700
+- **SNES** (see [docs/snes.md](docs/snes.md)): Tom Harte's 65816 and SPC700
   SingleStepTests, krom's CPU test ROMs and PPU demos compared with their screenshots, and unit
   tests of the cartridge, bus, timing, DMA, PPU, APU and DSP.
 
@@ -131,7 +109,7 @@ so Vite runs on Bun (`bun --bun vite`) rather than Node.
 src/
   systems/      One adapter per console, implementing the Emulator interface in types.ts
     nes/        NES: the adapter, logo and debugger views, and core/ with the CPU, PPU, APU, bus, cartridge and mappers
-    snes/       SNES, in progress: the adapter, and core/ with the 65816 CPU, bus, timing, DMA, PPU, APU and cartridge
+    snes/       SNES: the adapter, and core/ with the 65816 CPU, bus, timing, DMA, PPU, APU and cartridge
   shell/        Console independent UI: game menu, screen, keyboard, emulation loop, audio, docs
 plugins/        Vite plugins: the ROM list of public/roms, and the docs rendered to HTML
 docs/           Documents shown in the app
@@ -159,4 +137,5 @@ to their authors and keep their own terms, see [test/fixtures/README.md](test/fi
 
 Nintendo, Nintendo Entertainment System, NES, Super Nintendo Entertainment System and SNES are
 trademarks of Nintendo. This project is not affiliated with, endorsed or sponsored by Nintendo.
-The names are only used to say which consoles it emulates, and no games are included.
+The names are only used to say which consoles it emulates, and only publicly available user-made
+ROMs are included.

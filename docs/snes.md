@@ -1,4 +1,30 @@
-# SNES emulation plan
+# SNES emulation
+
+What the emulator does for the Super Nintendo Entertainment System, what it doesn't do yet, and
+the plan it was built by.
+
+## Features
+
+- **CPU**: the 65816 in emulation and native mode, with the cycle count of each instruction and
+  the memory speed of each region, FastROM included.
+- **PPU**: all background modes, sprites, color math, windows, mode 7, mosaic, hi-res and
+  interlace.
+- **DMA**: general DMA and HDMA on all 8 channels.
+- **APU**: the SPC700 and the DSP with all 8 voices and echo, in stereo.
+- **Controllers**: player 1 on the keyboard.
+- **Cartridges**: LoROM, HiROM and ExHiROM, with battery-backed SRAM kept in the browser (IndexedDB)
+  between sessions. European (PAL) games run as on a PAL console, at 50 Hz with its longer
+  frame, as their cartridge header says.
+- **Debugger**: step one instruction at a time, and see the CPU registers and disassembly, the
+  PPU's state, palette, VRAM tiles and sprites, and the APU's voices.
+
+## Not supported yet
+
+- Enhancement chips in cartridges, like the SuperFX, SA-1 and DSP-1. Their games load with a
+  warning, but may not work.
+- Cycle-exact timing: a few of krom's test demos need IRQs and DMA timed to the cycle.
+
+## Plan
 
 The SNES slots into the multi-system frontend: the core lives in `src/systems/snes/core/`, and
 once it runs games, `src/systems/snes/index.ts` gets a `create()` that returns an `Emulator`

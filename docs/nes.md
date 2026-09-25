@@ -1,4 +1,31 @@
-# NES emulation plan
+# NES emulation
+
+What the emulator does for the Nintendo Entertainment System, what it doesn't do yet, and the plan for the rest.
+
+## Features
+
+- **CPU**: the 6502 (2A03) with all 256 opcodes, including the unofficial ones, and correct
+  cycle counts per instruction.
+- **PPU**: backgrounds with scrolling, 8x8 and 8x16 sprites with flipping and priority,
+  sprite zero hit and sprite overflow, and nametable mirroring.
+- **APU**: both pulse channels, triangle, noise and DMC, the frame counter and its IRQ, played
+  through the Web Audio API.
+- **Controllers**: player 1 on the keyboard.
+- **Cartridges**: iNES ROMs using mapper 0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3,
+  including its scanline IRQ), 7 (AxROM) or 9 (MMC2), with PRG RAM and CHR RAM. Battery-backed
+  PRG RAM is kept in the browser (IndexedDB) between sessions.
+- **Debugger**: step one instruction or frame at a time, trigger an IRQ or NMI, and see the CPU
+  registers, disassembly around the program counter, RAM, palettes and pattern tables.
+
+## Not supported yet
+
+- Cycle-accurate CPU timing: instructions run all at once on their first cycle, so memory
+  accesses within an instruction happen a few cycles early. Games don't notice, but a few
+  timing test ROMs do.
+- Other mappers. ROMs with an unsupported mapper load as mapper 0, with a warning.
+- A second controller, PAL timing and save states.
+
+## Plan
 
 The NES runs most games that use the common boards: the 6502 with all 256 opcodes, the PPU,
 the APU with all five channels, and mappers 0, 1, 2, 3, 4, 7 and 9. This plan covers what is
