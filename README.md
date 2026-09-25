@@ -73,7 +73,7 @@ the user interacts with them.
 | `bun run dev` | Development server at http://localhost:3000 |
 | `bun run build` | Production build into `build/` (`BASE_PATH=/nes-emu/` to serve it from a subpath) |
 | `bun run preview` | Serve the production build |
-| `bun test` | Run the tests (`SLOW_TESTS=1 bun test` includes the slow ones, as CI does) |
+| `bun test` | Run the tests (`SLOW_TESTS=1 bun test` includes the slow tests) |
 | `bun run typecheck` | Type check with TypeScript |
 | `bun run fetch-cpu-tests` | Download the 6502 test sample again, see `test/fixtures/README.md` |
 | `bun run fetch-65816-tests` | Download the 65816 (SNES CPU) test sample again, see `test/fixtures/README.md` |
