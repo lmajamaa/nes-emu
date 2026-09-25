@@ -1,0 +1,154 @@
+# NES emulation plan
+
+The NES runs most games that use the common boards: the 6502 with all 256 opcodes, the PPU,
+the APU with all five channels, and mappers 0, 1, 2, 3, 4, 7 and 9. This plan covers what is
+left: the core moving next to the SNES one, saves, the second controller, PPU and CPU accuracy,
+more mappers, PAL and save states. The adapter is `NesEmulator` in `src/systems/nes/index.tsx`,
+implementing `Emulator` (see `src/systems/types.ts`).
+
+References: the [NESdev wiki](https://www.nesdev.org/wiki/) (CPU, PPU rendering and frame
+timing, APU, mappers, NES 2.0), [NesCartDB](https://nescartdb.com/) for which games use which
+board, and the test ROMs collected in
+[christopherpow/nes-test-roms](https://github.com/christopherpow/nes-test-roms).
+
+## Layout
+
+After milestone 1, the NES looks like the SNES:
+
+```
+src/systems/nes/
+  core/
+    cartridge.ts      iNES / NES 2.0 header, PRG ROM, CHR ROM or RAM, PRG RAM
+    mappers/          one file per mapper, on the Mapper base class
+    bus.ts            CPU memory map, 2 KB RAM, OAM DMA, controller ports
+    cpu.ts            6502 (2A03), with instructions.ts as the opcode table
+    ppu.ts            rendering, sprites, the PPU's registers in registers/
+    apu.ts            pulse, triangle, noise, DMC, frame counter
+    graphics.ts       the 64 colour palette, IndexedImage
+  ui/                 logo, debugger views
+  index.tsx           NesEmulator adapter
+test/fixtures/        test ROMs and data, the tests are next to the code as *.test.ts
+```
+
+## Milestones
+
+Each milestone ends with tests that run automatically, next to the code as `*.test.ts`. Test
+ROMs are checked in under `test/fixtures/` with their source, like blargg's APU and MMC3 tests.
+
+### 1. Core next to the SNES (small)
+
+- Move `src/nes/` to `src/systems/nes/core/`. Only the imports change.
+- Tests: the existing suite, unchanged apart from import paths.
+
+### 2. Battery saves (small)
+
+- Bit 1 of header byte 6 marks battery-backed PRG RAM. `NesEmulator` gets a `saveId` from a
+  hash of the ROM, plus `loadSave` and `takeSave` over the cartridge's PRG RAM, with a dirty
+  flag set on writes. The shell already stores the saves in IndexedDB for the SNES.
+- The FNV-1a `hashOf` in `snes/emulator.tsx` moves to `src/utils.ts` so both systems share it.
+- Games: The Legend of Zelda and Final Fantasy (MMC1), Kirby's Adventure (MMC3).
+- Tests: unit tests like the SNES ones. A save restores into PRG RAM before the first frame,
+  and `takeSave` returns data only when PRG RAM changed.
+
+### 3. Second controller (small)
+
+- The bus already has two controller ports, but only player 1 is mapped. `keyMap` needs a
+  player per key, so it becomes `Record<string, { player: number; button: number }>` for both
+  systems.
+- Gamepads through the Gamepad API, polled once per frame in the emulation loop, the first
+  pad as player 1 and the second as player 2.
+- Tests: `$4017` reads player 2's buttons in `core/controller.test.ts`, plus unit tests of the key
+  mapping.
+
+### 4. PPU accuracy (medium)
+
+- The odd frame skip only happens on odd frames with rendering on. Today it happens every frame.
+- Greyscale and the colour emphasis bits of `$2001`, which `MaskRegister` stores but rendering
+  ignores. Emphasis dims the other channels, so the palette becomes 8 × 64 colours, still one
+  lookup per pixel.
+- Reading the PPU registers without side effects when `readOnly` is set, which `Ppu.cpuRead`
+  takes but ignores, so the debugger can't clear VBlank.
+- Open bus on the write-only registers and in the low bits of `$2002`, and the sprite overflow
+  flag's hardware bug.
+- Tests: blargg's `ppu_vbl_nmi`, `sprite_hit_tests`, `sprite_overflow_tests`,
+  `ppu_read_buffer` and `ppu_open_bus`, reporting through `$6000` like the other blargg ROMs
+  or compared with a hash of the screen.
+
+### 5. Cycle-accurate CPU (large)
+
+- Each instruction runs all at once on its first cycle, so its memory accesses happen a few
+  cycles early. Instead, every access happens on its own cycle, including the dummy reads and
+  writes, and interrupts are polled on the second-to-last cycle.
+- The DMC's sample fetch stalls the CPU for up to 4 cycles, like OAM DMA already does.
+- This fixes `4-scanline_timing.nes`, which is marked as a known failure and turns red once it
+  passes.
+- Tests: the 6502 SingleStepTests with their per-cycle bus activity, which the checked-in sample
+  strips today. `fetch-cpu-tests` keeps it, and each access is compared. Then blargg's
+  `cpu_interrupts_v2`, `instr_timing`, `cpu_dummy_reads`, `cpu_dummy_writes` and
+  `dmc_dma_during_read4`.
+
+### 6. More mappers (medium, small each)
+
+- By the number of games that use them:
+  1. 66 GxROM (Super Mario Bros. + Duck Hunt), 11 Color Dreams, 34 BNROM.
+  2. 10 MMC4 (Fire Emblem), which is MMC2 with 16 KB PRG banks, so it shares `Mmc2`'s latches.
+  3. 206 and 118 (Namco and TxSROM), both MMC3 variants.
+  4. 21–25 VRC2/VRC4 and 69 Sunsoft FME-7, whose IRQ counts CPU cycles instead of scanlines.
+  5. 5 MMC5 (Castlevania III), which is large: extended attributes, split screen, its own PRG
+     RAM and a scanline detector.
+- NES 2.0 headers: submappers, PRG RAM and CHR RAM sizes, and the region for milestone 7.
+- Tests: unit tests per mapper like `mappers/mapper_004.test.ts`, then tepples' Holy Mapperel ROMs,
+  which check bank switching and mirroring for most of these boards.
+
+### 7. PAL (small)
+
+- Set by the region in the NES 2.0 header, or byte 9 of an iNES header. Unset means NTSC.
+- 312 scanlines, 3.2 PPU dots per CPU cycle, a 1.66 MHz CPU clock and 50 Hz, with PAL tables
+  for the noise and DMC periods and the frame counter. The emulation loop already takes
+  `frameRate` from the emulator, as it does for PAL SNES games.
+- Tests: unit tests of frame length, NMI timing and the APU tables for each region.
+
+### 8. Save states (medium)
+
+- `saveState()` and `loadState()` on `Emulator`: every component writes its registers and
+  typed arrays into one buffer, versioned so an old state is rejected rather than misread.
+- Two keyboard shortcuts for a single slot, kept in IndexedDB next to the saves.
+- The SNES gets it the same way later.
+- Tests: running N frames equals saving, loading into a new emulator and running N frames, with
+  the same screen hash and RAM.
+
+### 9. Later
+
+- Expansion audio: VRC6, FME-7 (Sunsoft 5B), MMC5, Namco 163.
+- Emulation in a Web Worker, shared with the SNES.
+- The Zapper (Duck Hunt), Game Genie codes, rewind built on save states.
+- The Famicom Disk System.
+
+## Risks and decisions
+
+- **Speed of the cycle-accurate CPU**: the PPU is already clocked per dot, but a CPU that
+  stops between accesses needs either a state machine per addressing mode or a table of
+  micro-ops per opcode, and it runs 1.79 million times a second. Measure frames per second in
+  Super Mario Bros. 3 before and after. If it doesn't keep 60 fps with room to spare, keep
+  today's instruction-at-once path and only step per access around DMA and interrupts.
+- **Accuracy target**: pass the test ROMs games depend on, not every edge case. Chip-dependent
+  results like `LXA` and the MMC3 revision A behaviour stay marked as known differences.
+- **Shared shell changes**: the controller mapping (3), save states (8) and the Web Worker touch
+  `src/shell/` and `types.ts`, so the SNES gets them in the same change.
+- **Order**: 1 → 2 → 3 are quick and make games more usable. Then 6 for the most requested
+  games and 4 in any order, 5 when the timing test ROMs are the remaining failures, then 7
+  and 8.
+
+## Progress
+
+- [x] 1. Core next to the SNES
+- [x] 2. Battery saves. PRG RAM is kept for cartridges with the battery bit, identified by a
+  hash of the PRG and CHR ROM (not the header, so re-headered dumps share a save) and stored like
+  the SNES's SRAM. Only a write that changes a byte counts as a change, as games keep writing
+  their work RAM there. PRG RAM is always 8 KB until NES 2.0 headers give its size (milestone 6)
+- [ ] 3. Second controller
+- [ ] 4. PPU accuracy
+- [ ] 5. Cycle-accurate CPU
+- [ ] 6. More mappers
+- [ ] 7. PAL
+- [ ] 8. Save states

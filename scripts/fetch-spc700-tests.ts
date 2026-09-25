@@ -1,13 +1,13 @@
-// Regenerates test/data/spc700/opcodes.json.gz from Tom Harte's SPC700 SingleStepTests
+// Regenerates test/fixtures/spc700/opcodes.json.gz from Tom Harte's SPC700 SingleStepTests
 // (https://github.com/SingleStepTests/spc700): downloads the start of every opcode's file, keeps
-// a small sample of each and bundles them into one gzipped file. See test/data/README.md.
+// a small sample of each and bundles them into one gzipped file. See test/fixtures/README.md.
 //
 // Usage: bun scripts/fetch-spc700-tests.ts [casesPerOpcode=100]
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import type { Spc700Bundle, Spc700State } from '../test/snes/helpers';
+import type { Spc700Bundle, Spc700State } from '../src/systems/snes/core/test-helpers';
 
 interface UpstreamCase {
     name: string;
@@ -17,7 +17,7 @@ interface UpstreamCase {
 }
 
 const BASE_URL = 'https://raw.githubusercontent.com/SingleStepTests/spc700/main/';
-const OUT_DIR = new URL('../test/data/spc700/', import.meta.url);
+const OUT_DIR = new URL('../test/fixtures/spc700/', import.meta.url);
 const casesPerOpcode = Number(process.argv[2] ?? 100);
 
 // The files hold 10,000 cases each, all on one line, so only download the start

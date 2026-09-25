@@ -1,13 +1,13 @@
-// Regenerates test/data/6502/opcodes.json.gz from Tom Harte's 6502 SingleStepTests
+// Regenerates test/fixtures/6502/opcodes.json.gz from Tom Harte's 6502 SingleStepTests
 // (https://github.com/SingleStepTests/65x02): downloads the opcodes, keeps a small sample
-// of each and bundles them into one gzipped file. See test/data/README.md.
+// of each and bundles them into one gzipped file. See test/fixtures/README.md.
 //
 // Usage: bun scripts/fetch-cpu-tests.ts [casesPerOpcode=100]
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import type { SingleStepBundle, SingleStepState } from '../test/helpers';
+import type { SingleStepBundle, SingleStepState } from '../src/systems/nes/core/test-helpers';
 
 // Upstream format: cycles holds the bus activity of every cycle
 interface UpstreamCase {
@@ -18,7 +18,7 @@ interface UpstreamCase {
 }
 
 const BASE_URL = 'https://raw.githubusercontent.com/SingleStepTests/65x02/main/6502/v1/';
-const OUT_DIR = new URL('../test/data/6502/', import.meta.url);
+const OUT_DIR = new URL('../test/fixtures/6502/', import.meta.url);
 const OUT_FILE = new URL('opcodes.json.gz', OUT_DIR);
 const casesPerOpcode = Number(process.argv[2] ?? 100);
 

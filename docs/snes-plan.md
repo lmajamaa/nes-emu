@@ -24,7 +24,7 @@ src/systems/snes/
     apu/              spc700.ts, dsp.ts, apu.ts (ARAM, timers, ports)
   ui/                 logo, debugger views
   index.tsx           SnesEmulator adapter
-test/snes/            + test/data/snes/
+test/fixtures/        test ROMs and data, the tests are next to the code as *.test.ts
 ```
 
 ## Milestones

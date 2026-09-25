@@ -1,5 +1,5 @@
 import { hex } from '../../../utils';
-import type Bus from '../../../nes/bus';
+import type Bus from '../core/bus';
 
 interface RamProps {
     bus: Bus;

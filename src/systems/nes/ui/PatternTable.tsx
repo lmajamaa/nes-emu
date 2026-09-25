@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { IndexedImage } from '../../../nes/graphics';
+import type { IndexedImage } from '../core/graphics';
 
 const PatternTable = ({ patternTable }: { patternTable: IndexedImage }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);

@@ -1,13 +1,13 @@
-// Regenerates test/data/krom/krom.bundle.gz: downloads krom's (Peter Lemon's) SNES test ROMs
-// and their reference screenshots, listed in test/snes/krom-cases.ts, and bundles them into one
-// gzipped file. See test/data/README.md.
+// Regenerates test/fixtures/krom/krom.bundle.gz: downloads krom's (Peter Lemon's) SNES test ROMs
+// and their reference screenshots, listed in src/systems/snes/core/test-krom-cases.ts, and bundles them into one
+// gzipped file. See test/fixtures/README.md.
 //
 // Usage: bun scripts/fetch-krom-tests.ts
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { packBundle } from '../test/snes/bundle';
-import { KROM_BUNDLE, KROM_CASES, referenceOf } from '../test/snes/krom-cases';
+import { packBundle } from '../src/systems/snes/core/test-bundle';
+import { KROM_BUNDLE, KROM_CASES, referenceOf } from '../src/systems/snes/core/test-krom-cases';
 
 const BASE_URL = 'https://raw.githubusercontent.com/PeterLemon/SNES/master/';
 

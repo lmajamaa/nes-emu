@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import type { NesEmulator } from '..';
-import { cssColor } from '../../../nes/graphics';
+import { cssColor } from '../core/graphics';
 import Ram from './Ram';
 import Cpu from './Cpu';
 import Code from './Code';

@@ -1,14 +1,14 @@
-// Regenerates test/data/65816/opcodes.json.gz from Tom Harte's 65816 SingleStepTests
+// Regenerates test/fixtures/65816/opcodes.json.gz from Tom Harte's 65816 SingleStepTests
 // (https://github.com/SingleStepTests/65816): downloads the start of every opcode's emulation
 // and native mode files, keeps a small sample of each and bundles them into one gzipped file.
-// See test/data/README.md.
+// See test/fixtures/README.md.
 //
 // Usage: bun scripts/fetch-65816-tests.ts [casesPerFile=50]
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import type { Snes65816Bundle, Snes65816State } from '../test/snes/helpers';
+import type { Snes65816Bundle, Snes65816State } from '../src/systems/snes/core/test-helpers';
 
 interface UpstreamCase {
     name: string;
@@ -19,7 +19,7 @@ interface UpstreamCase {
 }
 
 const BASE_URL = 'https://raw.githubusercontent.com/SingleStepTests/65816/main/v1/';
-const OUT_DIR = new URL('../test/data/65816/', import.meta.url);
+const OUT_DIR = new URL('../test/fixtures/65816/', import.meta.url);
 const OUT_FILE = new URL('opcodes.json.gz', OUT_DIR);
 const casesPerFile = Number(process.argv[2] ?? 50);
 

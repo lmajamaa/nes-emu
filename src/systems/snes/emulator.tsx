@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { hashOf } from '../../utils';
 import type { Emulator, LoadResult } from '../types';
 import { DSP_SAMPLE_RATE } from './core/apu/dsp';
 import SnesCartridge from './core/cartridge';
@@ -8,16 +9,6 @@ import Resampler from './resampler';
 import SnesDebugger from './ui/SnesDebugger';
 
 const NTSC_FRAME_RATE = 21_477_272 / (1364 * 262);
-
-// FNV-1a, to tell games apart for their saves
-function hashOf(data: Uint8Array): string {
-    let hash = 0x811C9DC5;
-    for (let i = 0; i < data.length; i++) {
-        hash ^= data[i];
-        hash = Math.imul(hash, 0x01000193);
-    }
-    return (hash >>> 0).toString(16).padStart(8, '0');
-}
 
 export class SnesEmulator implements Emulator {
     snes: Snes | null = null;

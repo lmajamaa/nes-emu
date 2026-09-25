@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import Bus from '../../nes/bus';
-import Cartridge, { SUPPORTED_MAPPERS } from '../../nes/cartridge';
-import { Button } from '../../nes/controller';
+import { hashOf } from '../../utils';
+import Bus from './core/bus';
+import Cartridge, { SUPPORTED_MAPPERS } from './core/cartridge';
+import { Button } from './core/controller';
 import type { Emulator, EmulatorSystem, LoadResult } from '../types';
 import NesLogo from './ui/NesLogo';
 import NesDebugger from './ui/NesDebugger';
@@ -11,6 +12,7 @@ export class NesEmulator implements Emulator {
     readonly width = 256;
     readonly height = 240;
     readonly frameRate = 60.0988;
+    saveId: string | null = null;
     // Palette used by the pattern table view
     selectedPalette = 0;
 
@@ -20,10 +22,25 @@ export class NesEmulator implements Emulator {
         const cartridge = new Cartridge(rom);
         this.bus.insertCartridge(cartridge);
         this.bus.reset();
+        this.saveId = cartridge.battery ? `nes-${hashOf(cartridge.rom)}` : null;
         if (!SUPPORTED_MAPPERS.includes(cartridge.mapperId)) {
             return { warning: `Mapper ${cartridge.mapperId} is not supported yet, running it as mapper 0 so it may not work.` };
         }
         return {};
+    }
+
+    loadSave(data: Uint8Array): void {
+        const cartridge = this.bus.cartridge;
+        if (!cartridge) return;
+        cartridge.prgRam.set(data.subarray(0, cartridge.prgRam.length));
+        cartridge.prgRamDirty = false;
+    }
+
+    takeSave(): Uint8Array | null {
+        const cartridge = this.bus.cartridge;
+        if (!cartridge?.prgRamDirty) return null;
+        cartridge.prgRamDirty = false;
+        return cartridge.prgRam.slice();
     }
 
     reset(): void {

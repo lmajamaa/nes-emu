@@ -14,7 +14,10 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@test/*": ["./test/*"]
+    }
   },
-  "include": ["src", "test", "scripts", "vite.config.ts"]
+  "include": ["src", "scripts", "vite.config.ts"]
 }

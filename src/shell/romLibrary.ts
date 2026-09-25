@@ -1,5 +1,4 @@
 import romFiles from 'virtual:rom-library';
-import nestestUrl from '../../test/data/nestest/nestest.nes?url';
 import { systemForFile, type EmulatorSystem } from '../systems';
 
 export interface RomEntry {
@@ -21,12 +20,12 @@ function encodeFileName(fileName: string): string {
     return encodeURI(fileName).replace(/[?#]/g, encodeURIComponent);
 }
 
-const bundled = [entry('nestest.nes', nestestUrl)];
-// ROMs dropped into public/roms, which is git ignored
-const local = romFiles.map(fileName => entry(fileName, `${import.meta.env.BASE_URL}roms/${encodeFileName(fileName)}`));
-
-export const DEFAULT_ROM = bundled[0]!;
-
-export const ROM_LIBRARY: readonly RomEntry[] = [...bundled, ...local]
-    .filter((rom, index, all): rom is RomEntry => rom !== null && all.findIndex(other => other?.fileName === rom.fileName) === index)
+// ROMs in public/roms, which is git ignored apart from nestest.nes
+export const ROM_LIBRARY: readonly RomEntry[] = romFiles
+    .map(fileName => entry(fileName, `${import.meta.env.BASE_URL}roms/${encodeFileName(fileName)}`))
+    .filter(rom => rom !== null)
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
+
+const nestest = ROM_LIBRARY.find(rom => rom.fileName === 'nestest.nes');
+if (!nestest) throw new Error('public/roms/nestest.nes is missing');
+export const DEFAULT_ROM: RomEntry = nestest;

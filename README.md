@@ -25,7 +25,8 @@ cartridge header says. Enhancement chips like the SuperFX aren't emulated yet.
   through the Web Audio API.
 - **Controllers**: player 1 on the keyboard.
 - **Cartridges**: iNES ROMs using mapper 0 (NROM), 1 (MMC1), 2 (UxROM), 3 (CNROM), 4 (MMC3,
-  including its scanline IRQ), 7 (AxROM) or 9 (MMC2), with PRG RAM and CHR RAM.
+  including its scanline IRQ), 7 (AxROM) or 9 (MMC2), with PRG RAM and CHR RAM. Battery-backed
+  PRG RAM is kept in the browser (IndexedDB) between sessions, for games like The Legend of Zelda.
 - **Debugger**: step one instruction or frame at a time, and see the CPU registers,
   disassembly around the program counter, RAM, palettes and pattern tables.
 
@@ -49,8 +50,8 @@ bun run dev
 Then open http://localhost:3000. The emulator starts with the `nestest` test ROM loaded and
 paused. Press **Space** to run it. Click the console logo to pick another game, or **Open ROM
 file…** to load a `.nes`, `.sfc` or `.smc` file from your computer. ROMs are read in the browser and not uploaded
-anywhere. No games are included, but ROMs you put in `public/roms` (git ignored) are listed in
-the menu, grouped by console.
+anywhere. No games are included, but ROMs you put in `public/roms` (git ignored, apart from
+`nestest.nes`) are listed in the menu, grouped by console.
 
 The screen has controls over its bottom edge, like a video player: run and pause, step a frame,
 reset, sound with a volume slider that pops up above it on hover (remembered), theater mode (the screen
@@ -93,10 +94,10 @@ user interacts with them.
 | `bun run preview` | Serve the production build |
 | `bun test` | Run the tests (`SLOW_TESTS=1 bun test` includes the slow ones, as CI does) |
 | `bun run typecheck` | Type check with TypeScript |
-| `bun run fetch-cpu-tests` | Download the 6502 test sample again, see `test/data/README.md` |
-| `bun run fetch-65816-tests` | Download the 65816 (SNES CPU) test sample again, see `test/data/README.md` |
-| `bun run fetch-krom-tests` | Download krom's SNES test ROMs and screenshots, see `test/data/README.md` |
-| `bun run fetch-spc700-tests` | Download the SPC700 (SNES sound CPU) test sample again, see `test/data/README.md` |
+| `bun run fetch-cpu-tests` | Download the 6502 test sample again, see `test/fixtures/README.md` |
+| `bun run fetch-65816-tests` | Download the 65816 (SNES CPU) test sample again, see `test/fixtures/README.md` |
+| `bun run fetch-krom-tests` | Download krom's SNES test ROMs and screenshots, see `test/fixtures/README.md` |
+| `bun run fetch-spc700-tests` | Download the SPC700 (SNES sound CPU) test sample again, see `test/fixtures/README.md` |
 
 ## Testing
 
@@ -121,14 +122,15 @@ CI runs the type check, the tests and the build on every push to `main` and on p
 
 ```
 src/
-  nes/          The NES emulator: CPU, PPU, APU, bus, cartridge, mappers
   systems/      One adapter per console, implementing the Emulator interface in types.ts
-    nes/        NES adapter, logo and debugger views
+    nes/        NES: the adapter, logo and debugger views, and core/ with the CPU, PPU, APU, bus, cartridge and mappers
     snes/       SNES, in progress: the adapter, and core/ with the 65816 CPU, bus, timing, DMA, PPU, APU and cartridge
   shell/        Console independent UI: game menu, screen, keyboard, emulation loop, audio
-test/           Tests, and test ROMs in test/data (with their sources)
+test/fixtures/  Test ROMs and data (with their sources), imported as @test/fixtures/...
 scripts/        Test data tooling
 ```
+
+Tests sit next to the code they test as `*.test.ts`, with shared test code in `test-*.ts` files.
 
 ## Credits
 
@@ -141,5 +143,5 @@ scripts/        Test data tooling
 
 ## License
 
-[MIT](LICENSE), for the emulator's own code. The test ROMs and test data in `test/data` belong
-to their authors and keep their own terms, see [test/data/README.md](test/data/README.md).
+[MIT](LICENSE), for the emulator's own code. The test ROMs and test data in `test/fixtures` belong
+to their authors and keep their own terms, see [test/fixtures/README.md](test/fixtures/README.md).
