@@ -1,19 +1,20 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
 import snes, { Button } from '.';
 import SnesBus from './core/bus';
 import SnesCartridge from './core/cartridge';
 import Snes from './core/snes';
-import { unpackBundle } from './core/test-bundle';
 import { buildRom } from './core/test-helpers';
-import { KROM_BUNDLE } from './core/test-krom-cases';
 import { SnesEmulator } from './emulator';
 
-const helloWorld = unpackBundle(readFileSync(KROM_BUNDLE)).get('HelloWorld/HelloWorld.sfc')!;
+// Makes the backdrop red and turns the screen on:
+// STZ $2121 ; LDA #$1F ; STA $2122 ; STZ $2122 ; LDA #$0F ; STA $2100 ; BRA *
+const redScreen = () => buildRom({
+    patches: { 0: [0x9C, 0x21, 0x21, 0xA9, 0x1F, 0x8D, 0x22, 0x21, 0x9C, 0x22, 0x21, 0xA9, 0x0F, 0x8D, 0x00, 0x21, 0x80, 0xFE] },
+}).buffer as ArrayBuffer;
 
 function loaded(): SnesEmulator {
     const emulator = snes.create!() as SnesEmulator;
-    emulator.load(helloWorld.slice().buffer);
+    emulator.load(redScreen());
     return emulator;
 }
 
@@ -29,13 +30,14 @@ describe('SNES emulator adapter', () => {
 
     test('runs a game and draws its frames 512 wide', () => {
         const emulator = loaded();
-        for (let i = 0; i < 30; i++) emulator.runFrame();
+        for (let i = 0; i < 3; i++) emulator.runFrame();
         expect([emulator.width, emulator.height]).toEqual([512, 224]);
         const image = imageData(emulator.width, emulator.height);
         emulator.drawFrame(image);
-        const pixels = new Uint32Array(image.data.buffer);
-        expect(new Set(pixels).size).toBeGreaterThan(1);
-        expect(pixels[0] >>> 24).toBe(0xFF);
+        const middle = ((112 * 512) + 256) * 4;
+        const [r, g, b, a] = image.data.subarray(middle, middle + 4);
+        expect(r).toBeGreaterThan(0xF0);
+        expect([g, b, a]).toEqual([0, 0, 0xFF]);
     });
 
     test('rejects files that are not SNES ROMs', () => {
@@ -51,7 +53,7 @@ describe('SNES emulator adapter', () => {
     test('passes buttons to controller 1, also ones held before loading', () => {
         const emulator = new SnesEmulator();
         emulator.setButton(0, Button.Start, true);
-        emulator.load(helloWorld.slice().buffer);
+        emulator.load(redScreen());
         emulator.setButton(0, Button.A, true);
         expect(emulator.snes!.bus.io.controllers[0].buttons).toBe(Button.Start | Button.A);
         emulator.setButton(0, Button.Start, false);
@@ -61,7 +63,6 @@ describe('SNES emulator adapter', () => {
     test('makes a frame of stereo sound per frame at the output rate', () => {
         const emulator = loaded();
         emulator.setSampleRate(48000);
-        // Its start up clears work RAM with DMAs longer than a frame
         for (let i = 0; i < 10; i++) {
             emulator.runFrame();
             emulator.takeSamples();

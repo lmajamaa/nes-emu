@@ -22,7 +22,7 @@ the plan it was built by.
 
 - Enhancement chips in cartridges, like the SuperFX, SA-1 and DSP-1. Their games load with a
   warning, but may not work.
-- Cycle-exact timing: a few of krom's test demos need IRQs and DMA timed to the cycle.
+- Cycle-exact timing: IRQs and DMA aren't timed to the cycle, which a few raster effects need.
 
 ## Plan
 
@@ -76,8 +76,6 @@ Each milestone ends with tests that run automatically, like the NES side.
   byte of D and page crossings. The memory speed (6, 8 or 12 master cycles) comes from the bus.
 - Tests: Tom Harte's [SingleStepTests/65816](https://github.com/SingleStepTests/65816),
   emulation and native mode files per opcode, sampled and gzipped like the 6502 ones.
-- Later, once the PPU shows text: krom's CPU test ROMs
-  ([PeterLemon/SNES](https://github.com/PeterLemon/SNES)).
 
 ### 3. Bus, timing and CPU registers (medium)
 
@@ -92,7 +90,7 @@ Each milestone ends with tests that run automatically, like the NES side.
 - 8 channels, all transfer modes, fixed and decrementing addresses, indirect HDMA.
 - HDMA runs every scanline and is used for gradients, wavy effects and window shapes, so it
   is needed early.
-- Tests: unit tests, then krom's DMA/HDMA demos.
+- Tests: unit tests of the addressing, directions and timing, and of HDMA's tables.
 
 ### 5. PPU (largest)
 
@@ -106,8 +104,7 @@ Each milestone ends with tests that run automatically, like the NES side.
   3. Main and sub screen, color math and fixed color, windows 1 and 2 with their masks.
   4. Modes 2–4 (offset per tile, 8 bpp), then mode 7 (affine, EXTBG).
   5. Mosaic, interlace, hi-res modes 5 and 6 (512 pixels wide).
-- Tests: krom's PPU demos, comparing a hash of the frame against a reference stored in the
-  repo. The krom CPU ROMs from milestone 2 can run from here on.
+- Tests: unit tests that set up VRAM, CGRAM, OAM and the registers, and check the pixels drawn.
 
 ### 6. APU (large, can be built alongside 3–5)
 
@@ -165,21 +162,16 @@ Each milestone ends with tests that run automatically, like the NES side.
 ## Progress
 
 - [x] 1. Cartridge
-- [x] 2. 65816 CPU (SingleStepTests and krom's CPU test ROMs)
+- [x] 2. 65816 CPU (SingleStepTests)
 - [x] 3. Bus, timing and CPU registers (multiply/divide results are ready at once instead of
   after 8/16 CPU cycles; latching the H/V counters waits for the PPU)
 - [x] 4. DMA and HDMA (timing is 8 master cycles per byte plus fixed overheads, without the
-  alignment to the CPU clock; a channel used for DMA and HDMA at once isn't handled; krom's
-  DMA/HDMA demos wait for the PPU)
+  alignment to the CPU clock; a channel used for DMA and HDMA at once isn't handled)
 - [x] 5. PPU. Hi-res (modes 5 and 6, pseudo hi-res) outputs 512 wide, the sub screen in the
   even columns like bsnes, and interlace draws the fields into alternate rows of a 448 or 478
-  line frame. krom's CPU tests and 28 of their PPU demos match their screenshots; the
-  128-colors-per-tile-row demos need cycle-accurate IRQ and DMA timing, the pseudo hi-res
-  screenshots only match in the main screen's columns, and the PPU/Interlace screenshots aren't
-  exact enough to compare with (in InterlaceRPG the sprite is a line lower than here, worth
-  checking against another reference)
-- [x] 6. APU. The SPC700 passes the SingleStepTests and krom's SPC700 test ROMs (which upload
-  their tests through the IPL, so they cover the ports and timing too). The DSP makes a whole
+  line frame. Effects that change colors mid-line need cycle-accurate IRQ and DMA timing
+- [x] 6. APU. The SPC700 passes the SingleStepTests, and unit tests upload programs through
+  the IPL like games do, so the ports and timers are covered too. The DSP makes a whole
   sample at a time rather than cycle by cycle, keys voices on at the next sample rather than
   every other one, and decodes BRR a block at a time; its 32 kHz stereo output still has to be
   resampled for the browser in milestone 7

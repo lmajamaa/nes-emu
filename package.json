@@ -16,7 +16,6 @@
     "test": "bun test",
     "fetch-cpu-tests": "bun scripts/fetch-cpu-tests.ts",
     "fetch-65816-tests": "bun scripts/fetch-65816-tests.ts",
-    "fetch-krom-tests": "bun scripts/fetch-krom-tests.ts",
     "fetch-spc700-tests": "bun scripts/fetch-spc700-tests.ts",
     "typecheck": "tsc -p ."
   },

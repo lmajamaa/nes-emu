@@ -1,6 +1,5 @@
-name: Pages
+name: Release
 
-# Publishes the app on GitHub Pages for each release
 on:
   release:
     types: [published]
@@ -32,7 +31,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # The app shows the version in package.json, so a release has to be tagged with it
       - name: Check the version
         run: |
           version=$(bun -p "require('./package.json').version")

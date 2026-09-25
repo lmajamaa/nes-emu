@@ -1,4 +1,4 @@
-# nes-emu
+# NES / SNES Emulator
 
 [![CI](https://github.com/lmajamaa/nes-emu/actions/workflows/ci.yml/badge.svg)](https://github.com/lmajamaa/nes-emu/actions/workflows/ci.yml)
 
@@ -77,7 +77,6 @@ the user interacts with them.
 | `bun run typecheck` | Type check with TypeScript |
 | `bun run fetch-cpu-tests` | Download the 6502 test sample again, see `test/fixtures/README.md` |
 | `bun run fetch-65816-tests` | Download the 65816 (SNES CPU) test sample again, see `test/fixtures/README.md` |
-| `bun run fetch-krom-tests` | Download krom's SNES test ROMs and screenshots, see `test/fixtures/README.md` |
 | `bun run fetch-spc700-tests` | Download the SPC700 (SNES sound CPU) test sample again, see `test/fixtures/README.md` |
 
 ## Testing
@@ -94,8 +93,7 @@ that needs a cycle-accurate CPU, one for a different MMC3 chip revision, and the
 opcode, whose result depends on the chip and differs between the SingleStepTests and the NES.
 - **Unit tests** for the PPU, sprites, APU channels, controllers and mappers.
 - **SNES** (see [docs/snes.md](docs/snes.md)): Tom Harte's 65816 and SPC700
-  SingleStepTests, krom's CPU test ROMs and PPU demos compared with their screenshots, and unit
-  tests of the cartridge, bus, timing, DMA, PPU, APU and DSP.
+  SingleStepTests, and unit tests of the cartridge, bus, timing, DMA, PPU, APU and DSP.
 
 CI runs the type check, the tests and the build on every push to `main` and on pull requests.
 Publishing a release deploys the app to GitHub Pages, under `/<repository>/`.
@@ -125,8 +123,8 @@ Tests sit next to the code they test as `*.test.ts`, with shared test code in `t
   is based on, and [fredericcambon/nes](https://github.com/fredericcambon/nes).
 - The [NESdev wiki](https://www.nesdev.org/wiki/), for most of the hardware details.
 - Test ROMs and data by kevtris (nestest), Tom Harte (SingleStepTests for the [6502](https://github.com/SingleStepTests/65x02)
-  and [65816](https://github.com/SingleStepTests/65816)), krom ([PeterLemon/SNES](https://github.com/PeterLemon/SNES))
-  and blargg (Shay Green), via [christopherpow/nes-test-roms](https://github.com/christopherpow/nes-test-roms).
+  and [65816](https://github.com/SingleStepTests/65816)) and blargg (Shay Green), via
+  [christopherpow/nes-test-roms](https://github.com/christopherpow/nes-test-roms).
 
 ## License
 

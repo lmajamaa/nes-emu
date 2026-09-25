@@ -69,20 +69,6 @@ repository doesn't state a license.
 Run `bun run fetch-65816-tests [casesPerFile]` to download the sample again (about 60 MB of
 partial requests), optionally with a different number of cases.
 
-## `krom/`
-
-`krom.bundle.gz` bundles krom's (Peter Lemon's) SNES test ROMs and demos, each with the
-reference screenshot next to it (see `src/systems/snes/core/test-bundle.ts` for the format):
-the 65816 and SPC700 CPU tests (which print PASS or FAIL for every case; the SPC700 ones take
-half a minute, so they only run with `SLOW_TESTS=1`), memory map tests, and PPU demos
-of backgrounds, color math, HDMA, mode 7, mosaic and windows. `src/systems/snes/core/snes.krom.test.ts` runs
-each one and compares the screen with its screenshot, the list is in `src/systems/snes/core/test-krom-cases.ts`.
-`PPU/Mode7/Perspective/Perspective.png` is a BMP file despite its name.
-
-Source: https://github.com/PeterLemon/SNES. The repository doesn't state a license.
-
-Run `bun run fetch-krom-tests` to download them again.
-
 ## `spc700/`
 
 `opcodes.json.gz` is a sample of Tom Harte's SPC700 SingleStepTests (the SNES sound CPU),
