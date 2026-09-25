@@ -385,8 +385,9 @@ class Apu {
     private sampleTimer = 0;
     private sampleSum = 0;
     private sampleCount = 0;
-    private samples: number[] = [];
-    private maxSamples = 0;
+    // A second of samples, of which the first are generated since the last take
+    private samples = new Float32Array(0);
+    private samplesBuffered = 0;
     private dcBlockerCoefficient = 0;
     private dcBlockerInput = 0;
     private dcBlockerOutput = 0;
@@ -403,15 +404,15 @@ class Apu {
 
     setSampleRate(sampleRate: number): void {
         this.samplePeriod = CPU_CLOCK_NTSC / sampleRate;
-        this.maxSamples = sampleRate;
         this.dcBlockerCoefficient = Math.exp(-2 * Math.PI * DC_BLOCKER_HZ / sampleRate);
-        this.samples = [];
+        this.samples = new Float32Array(Math.ceil(sampleRate));
+        this.samplesBuffered = 0;
     }
 
     // Samples generated since the last call
     takeSamples(): Float32Array {
-        const samples = Float32Array.from(this.samples);
-        this.samples = [];
+        const samples = this.samples.slice(0, this.samplesBuffered);
+        this.samplesBuffered = 0;
         return samples;
     }
 
@@ -523,8 +524,8 @@ class Apu {
         this.dcBlockerOutput = output;
 
         // Nobody is taking the samples, e.g. when there is no audio output
-        if (this.samples.length >= this.maxSamples) this.samples = [];
-        this.samples.push(output);
+        if (this.samplesBuffered >= this.samples.length) this.samplesBuffered = 0;
+        this.samples[this.samplesBuffered++] = output;
     }
 
     cpuRead(addr: number, readOnly = false): number {
@@ -578,7 +579,7 @@ class Apu {
         this.cpuWrite(0x4017, 0x00);
         this.frameIrq = false;
         this.dmc.level = 0;
-        this.samples = [];
+        this.samplesBuffered = 0;
         this.sampleTimer = 0;
         this.sampleSum = 0;
         this.sampleCount = 0;

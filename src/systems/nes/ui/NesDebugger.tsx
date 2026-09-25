@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import type { NesEmulator } from '..';
+import { cssColor } from '../../../nes/graphics';
 import Ram from './Ram';
 import Cpu from './Cpu';
 import Code from './Code';
@@ -9,30 +10,22 @@ import PatternTable from './PatternTable';
 const NesDebugger = ({ nes, children }: { nes: NesEmulator; children: ReactNode }) => {
     const { bus, selectedPalette } = nes;
     const disassembly = useMemo(() => bus.cpu.disassemble(0x0000, 0xFFFF), [bus]);
-
-    const palettes: string[][] = [];
-    for (let p = 0; p < 8; p++) {
-        const palette = [];
-        for (let s = 0; s < 4; s++) {
-            const pixel = bus.ppu.getColorFromPaletteRam(p, s);
-            palette.push(`rgb(${pixel.r}, ${pixel.g}, ${pixel.b})`);
-        }
-        palettes.push(palette);
-    }
+    const palettes = Array.from({ length: 8 }, (_, palette) =>
+        Array.from({ length: 4 }, (_, pixel) => cssColor(bus.ppu.colorOf(palette, pixel))));
 
     return (
         <>
             <div className="column">
                 {children}
                 <code className="instructions">C = Step Instruction    P = Palette    I = IRQ    N = NMI</code>
-                <Ram nes={bus} nAddr={0x0000} nRows={16} nColumns={16} />
-                <Ram nes={bus} nAddr={0x8000} nRows={16} nColumns={16} />
+                <Ram bus={bus} start={0x0000} rows={16} columns={16} />
+                <Ram bus={bus} start={0x8000} rows={16} columns={16} />
             </div>
             <div className="column">
-                <Cpu cpu={{ ...bus.cpu }} />
-                <Code pc={bus.cpu.pc} mapAsm={disassembly} />
+                <Cpu cpu={bus.cpu} />
+                <Code pc={bus.cpu.pc} lines={disassembly} />
                 <div>
-                    {palettes.map((palette, index) => <Palette key={index} size={10} data={palette} selected={selectedPalette === index} />)}
+                    {palettes.map((colors, index) => <Palette key={index} size={10} colors={colors} selected={selectedPalette === index} />)}
                 </div>
                 <div>
                     <PatternTable patternTable={bus.ppu.getPatternTable(0, selectedPalette)} />

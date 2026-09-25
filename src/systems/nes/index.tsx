@@ -32,23 +32,12 @@ export class NesEmulator implements Emulator {
 
     runFrame(): void {
         const { bus } = this;
-        do { bus.clock(); } while (!bus.ppu.frame_complete);
-        bus.ppu.frame_complete = false;
+        do { bus.clock(); } while (!bus.ppu.frameComplete);
+        bus.ppu.frameComplete = false;
     }
 
     drawFrame(target: ImageData): void {
-        const screen = this.bus.ppu.getScreen();
-        const data = target.data;
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                const pixel = screen.getPixel(x, y);
-                const index = (y * this.width + x) * 4;
-                data[index + 0] = pixel.r;
-                data[index + 1] = pixel.g;
-                data[index + 2] = pixel.b;
-                data[index + 3] = 255;
-            }
-        }
+        this.bus.ppu.screen.toRgba(target.data);
     }
 
     setButton(player: number, button: number, pressed: boolean): void {

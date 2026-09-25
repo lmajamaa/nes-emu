@@ -1,23 +1,21 @@
 class StatusRegister {
     unused = 0;
-    sprite_overflow = 0;
-    sprite_zero_hit = 0;
-    vertical_blank = 0;
+    spriteOverflow = 0;
+    spriteZeroHit = 0;
+    verticalBlank = 0;
 
     get reg(): number {
-        let value = 0;
-        value = value | (this.unused & 0x1F);
-        value = value | (this.sprite_overflow << 5);
-        value = value | (this.sprite_zero_hit << 6);
-        value = value | (this.vertical_blank << 7);
-        return value;
+        return (this.unused & 0x1F)
+            | (this.spriteOverflow << 5)
+            | (this.spriteZeroHit << 6)
+            | (this.verticalBlank << 7);
     }
 
     set reg(value: number) {
         this.unused = value & 0x1F;
-        this.sprite_overflow = (value >> 5) & 1;
-        this.sprite_zero_hit = (value >> 6) & 1;
-        this.vertical_blank = (value >> 7) & 1;
+        this.spriteOverflow = (value >> 5) & 1;
+        this.spriteZeroHit = (value >> 6) & 1;
+        this.verticalBlank = (value >> 7) & 1;
     }
 }
 

@@ -1,4 +1,4 @@
-import Mapper, { type MappedAddress } from './mapper';
+import Mapper from './mapper';
 import { MIRROR, type Mirror } from '../constants';
 
 const PRG_BANK_SIZE = 0x2000;
@@ -8,7 +8,7 @@ const FD = 0;
 const FE = 1;
 
 // MMC2, used by Punch-Out!!, see https://www.nesdev.org/wiki/MMC2
-class Mapper_009 extends Mapper {
+class Mmc2 extends Mapper {
     private prgBank = 0;
     // [pattern table][latch]
     private readonly chrBanks = [[0, 0], [0, 0]];
@@ -16,18 +16,17 @@ class Mapper_009 extends Mapper {
     private pendingLatch: [table: number, value: number] | null = null;
     private horizontalMirroring = false;
 
-    private get prgBanks(): number {
-        return this._nPRGBanks * 2;
+    private get prgBankCount(): number {
+        return this.prgRomBanks * 2;
     }
 
     // $8000 is switchable, the rest is fixed to the last three 8KB banks
-    cpuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr < 0x8000 || addr > 0xFFFF) return false;
+    cpuMapRead(addr: number): number | null {
+        if (addr < 0x8000 || addr > 0xFFFF) return null;
 
         const slot = (addr >> 13) & 0x03;
-        const bank = slot === 0 ? this.prgBank : this.prgBanks - 4 + slot;
-        object.mapped_addr = (bank % this.prgBanks) * PRG_BANK_SIZE + (addr & (PRG_BANK_SIZE - 1));
-        return true;
+        const bank = slot === 0 ? this.prgBank : this.prgBankCount - 4 + slot;
+        return (bank % this.prgBankCount) * PRG_BANK_SIZE + (addr & (PRG_BANK_SIZE - 1));
     }
 
     cpuMapWrite(addr: number, data: number): boolean {
@@ -44,23 +43,23 @@ class Mapper_009 extends Mapper {
         return true;
     }
 
-    ppuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr > 0x1FFF) return false;
+    ppuMapRead(addr: number): number | null {
+        if (addr > 0x1FFF) return null;
 
         const table = addr >> 12;
         const bank = this.chrBanks[table][this.latches[table]];
-        const banks = Math.max(this._nCHRBanks, 1) * 2;
-        object.mapped_addr = (bank % banks) * CHR_BANK_SIZE + (addr & (CHR_BANK_SIZE - 1));
-        return true;
+        const banks = Math.max(this.chrRomBanks, 1) * 2;
+        return (bank % banks) * CHR_BANK_SIZE + (addr & (CHR_BANK_SIZE - 1));
     }
 
-    ppuMapWrite(_addr: number, _object: MappedAddress): boolean {
-        return false;
+    // CHR ROM only
+    override ppuMapWrite(_addr: number): number | null {
+        return null;
     }
 
     // Fetching tile $FD or $FE sets the latch of its pattern table. The fetch itself still
     // uses the old bank, so the change is applied at the next access.
-    ppuAddress(addr: number, _time: number): void {
+    override ppuAddress(addr: number, _time: number): void {
         if (this.pendingLatch) {
             const [table, value] = this.pendingLatch;
             this.latches[table] = value;
@@ -74,11 +73,11 @@ class Mapper_009 extends Mapper {
         else if (addr >= 0x1FE8 && addr <= 0x1FEF) this.pendingLatch = [1, FE];
     }
 
-    mirror(): Mirror {
+    override mirror(): Mirror {
         return this.horizontalMirroring ? MIRROR.HORIZONTAL : MIRROR.VERTICAL;
     }
 
-    reset(): void {
+    override reset(): void {
         this.prgBank = 0;
         for (const banks of this.chrBanks) banks.fill(0);
         this.latches.fill(FE);
@@ -87,4 +86,4 @@ class Mapper_009 extends Mapper {
     }
 }
 
-export default Mapper_009;
+export default Mmc2;

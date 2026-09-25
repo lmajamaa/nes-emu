@@ -85,8 +85,8 @@ export function buildRom({ prg, chr, mapper = 0 }: { prg?: Uint8Array, chr?: Uin
 export function runFrames(target: Bus | Ppu, frames: number): void {
     const ppu = target instanceof Bus ? target.ppu : target;
     for (let f = 0; f < frames; f++) {
-        do { target.clock(); } while (!ppu.frame_complete);
-        ppu.frame_complete = false;
+        do { target.clock(); } while (!ppu.frameComplete);
+        ppu.frameComplete = false;
     }
 }
 

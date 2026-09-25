@@ -1,12 +1,11 @@
-import Mapper, { type MappedAddress } from './mapper';
+import Mapper from './mapper';
 
-class Mapper_000 extends Mapper {
-    cpuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr >= 0x8000 && addr <= 0xFFFF) {
-            object.mapped_addr = addr & (this._nPRGBanks > 1 ? 0x7FFF : 0x3FFF);
-            return true;
-        }
-        return false;
+// NROM: no bank switching, 16KB or 32KB of PRG ROM and 8KB of CHR
+class Nrom extends Mapper {
+    cpuMapRead(addr: number): number | null {
+        if (addr < 0x8000 || addr > 0xFFFF) return null;
+        // 16KB of PRG ROM repeats in both halves
+        return addr & (this.prgRomBanks > 1 ? 0x7FFF : 0x3FFF);
     }
 
     // No registers, writes to ROM are ignored
@@ -14,29 +13,9 @@ class Mapper_000 extends Mapper {
         return addr >= 0x8000 && addr <= 0xFFFF;
     }
 
-    ppuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr >= 0x0000 && addr <= 0x1FFF) {
-            object.mapped_addr = addr;
-            return true;
-        }
-
-        return false;
-    }
-
-    ppuMapWrite(addr: number, object: MappedAddress): boolean {
-        if (addr >= 0x0000 && addr <= 0x1FFF) {
-            if (this._nCHRBanks === 0) {
-                // Treat as RAM
-                object.mapped_addr = addr;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    reset(): void {
-
+    ppuMapRead(addr: number): number | null {
+        return addr <= 0x1FFF ? addr : null;
     }
 }
 
-export default Mapper_000;
+export default Nrom;

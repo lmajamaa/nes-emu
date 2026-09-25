@@ -1,32 +1,21 @@
 import { useEffect, useRef } from 'react';
-import type { Sprite } from '../../../nes/graphics';
+import type { IndexedImage } from '../../../nes/graphics';
 
-const PatternTable = ({ patternTable }: { patternTable: Sprite }) => {
+const PatternTable = ({ patternTable }: { patternTable: IndexedImage }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
+    // The image is updated in place, so redraw on every render
     useEffect(() => {
-        const canvas = canvasRef.current;
-        const context = canvas?.getContext('2d');
-        if (!canvas || !context) return;
-
-        // Every pixel is drawn, so a new image does without reading the canvas back
-        const canvasData = context.createImageData(canvas.width, canvas.height);
-        for (let x = 0; x < patternTable.width; x++) {
-            for (let y = 0; y < patternTable.height; y++) {
-                const pixel = patternTable.getPixel(x, y);
-                const index = (x * 4 + (y * patternTable.width) * 4);
-                canvasData.data[index + 0] = pixel.r;
-                canvasData.data[index + 1] = pixel.g;
-                canvasData.data[index + 2] = pixel.b;
-                canvasData.data[index + 3] = 255;
-            }
-        }
-        context.putImageData(canvasData, 0, 0);
-    }); // The sprite is updated in place, so redraw on every render
+        const context = canvasRef.current?.getContext('2d');
+        if (!context) return;
+        const image = context.createImageData(patternTable.width, patternTable.height);
+        patternTable.toRgba(image.data);
+        context.putImageData(image, 0, 0);
+    });
 
     return (
         <canvas id="patternCanvas" ref={canvasRef} width={patternTable.width} height={patternTable.height} />
     );
-}
+};
 
 export default PatternTable;

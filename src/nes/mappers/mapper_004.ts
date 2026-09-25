@@ -1,4 +1,4 @@
-import Mapper, { type MappedAddress } from './mapper';
+import Mapper from './mapper';
 import { MIRROR, type Mirror } from '../constants';
 
 const PRG_BANK_SIZE = 0x2000;
@@ -7,7 +7,7 @@ const CHR_BANK_SIZE = 0x0400;
 const A12_FILTER_CYCLES = 10;
 
 // MMC3, see https://www.nesdev.org/wiki/MMC3
-class Mapper_004 extends Mapper {
+class Mmc3 extends Mapper {
     // R0-R5 select CHR banks, R6-R7 PRG banks
     private readonly registers = new Uint8Array(8);
     private bankSelect = 0;
@@ -21,14 +21,14 @@ class Mapper_004 extends Mapper {
     private a12High = false;
     private a12FellAt = 0;
 
-    private get prgBanks(): number {
-        return this._nPRGBanks * 2;
+    private get prgBankCount(): number {
+        return this.prgRomBanks * 2;
     }
 
-    cpuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr < 0x8000 || addr > 0xFFFF) return false;
+    cpuMapRead(addr: number): number | null {
+        if (addr < 0x8000 || addr > 0xFFFF) return null;
 
-        const secondLast = this.prgBanks - 2;
+        const secondLast = this.prgBankCount - 2;
         // Bit 6 swaps the switchable $8000 bank with the fixed second-last bank at $C000
         const swapped = (this.bankSelect & 0x40) !== 0;
         let bank: number;
@@ -36,10 +36,9 @@ class Mapper_004 extends Mapper {
             case 0: bank = swapped ? secondLast : this.registers[6]; break;
             case 1: bank = this.registers[7]; break;
             case 2: bank = swapped ? this.registers[6] : secondLast; break;
-            default: bank = this.prgBanks - 1; break;
+            default: bank = this.prgBankCount - 1; break;
         }
-        object.mapped_addr = (bank % this.prgBanks) * PRG_BANK_SIZE + (addr & (PRG_BANK_SIZE - 1));
-        return true;
+        return (bank % this.prgBankCount) * PRG_BANK_SIZE + (addr & (PRG_BANK_SIZE - 1));
     }
 
     // Registers come in pairs, selected by the address range and whether it's even or odd
@@ -91,30 +90,22 @@ class Mapper_004 extends Mapper {
             bank = this.registers[2 + ((a - 0x1000) >> 10)];
         }
         // Boards with CHR RAM have 8KB of it
-        const banks = Math.max(this._nCHRBanks, 1) * 8;
+        const banks = Math.max(this.chrRomBanks, 1) * 8;
         return (bank % banks) * CHR_BANK_SIZE + (addr & (CHR_BANK_SIZE - 1));
     }
 
-    ppuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr > 0x1FFF) return false;
-        object.mapped_addr = this.chrOffset(addr);
-        return true;
+    ppuMapRead(addr: number): number | null {
+        return addr <= 0x1FFF ? this.chrOffset(addr) : null;
     }
 
-    ppuMapWrite(addr: number, object: MappedAddress): boolean {
-        if (addr > 0x1FFF || this._nCHRBanks !== 0) return false;
-        object.mapped_addr = this.chrOffset(addr);
-        return true;
-    }
-
-    mirror(): Mirror {
+    override mirror(): Mirror {
         return this.horizontalMirroring ? MIRROR.HORIZONTAL : MIRROR.VERTICAL;
     }
 
     // The counter is clocked by rising edges of PPU address line A12, but only after A12 has
     // been low for a while. That filters out the quick toggling between sprite tile fetches,
     // so it's normally clocked once per scanline.
-    ppuAddress(addr: number, time: number): void {
+    override ppuAddress(addr: number, time: number): void {
         const high = (addr & 0x1000) !== 0;
         if (high && !this.a12High && time - this.a12FellAt >= A12_FILTER_CYCLES) {
             this.clockCounter();
@@ -133,11 +124,11 @@ class Mapper_004 extends Mapper {
         if (this.irqCounter === 0 && this.irqEnabled) this.irqPending = true;
     }
 
-    get irq(): boolean {
+    override get irq(): boolean {
         return this.irqPending;
     }
 
-    reset(): void {
+    override reset(): void {
         this.registers.fill(0);
         this.bankSelect = 0;
         this.horizontalMirroring = false;
@@ -151,4 +142,4 @@ class Mapper_004 extends Mapper {
     }
 }
 
-export default Mapper_004;
+export default Mmc3;

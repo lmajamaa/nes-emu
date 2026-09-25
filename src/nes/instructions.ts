@@ -14,261 +14,261 @@ export type Mnemonic =
 export type Instruction = readonly [mnemonic: Mnemonic, mode: AddressingMode, size: number, cycles: number];
 
 // All 256 opcodes, including the unofficial ones, see https://www.nesdev.org/wiki/CPU_unofficial_opcodes
-export const instructions: Readonly<Record<number, Instruction>> = {
-  0x00: ['BRK', 'IMP', 1, 7],
-  0x01: ['ORA', 'IZX', 2, 6],
-  0x02: ['JAM', 'IMP', 1, 2],
-  0x03: ['SLO', 'IZX', 2, 8],
-  0x04: ['NOP', 'ZP0', 2, 3],
-  0x05: ['ORA', 'ZP0', 2, 3],
-  0x06: ['ASL', 'ZP0', 2, 5],
-  0x07: ['SLO', 'ZP0', 2, 5],
-  0x08: ['PHP', 'IMP', 1, 3],
-  0x09: ['ORA', 'IMM', 2, 2],
-  0x0A: ['ASL', 'IMP', 1, 2],
-  0x0B: ['ANC', 'IMM', 2, 2],
-  0x0C: ['NOP', 'ABS', 3, 4],
-  0x0D: ['ORA', 'ABS', 3, 4],
-  0x0E: ['ASL', 'ABS', 3, 6],
-  0x0F: ['SLO', 'ABS', 3, 6],
-  0x10: ['BPL', 'REL', 2, 2],
-  0x11: ['ORA', 'IZY', 2, 5],
-  0x12: ['JAM', 'IMP', 1, 2],
-  0x13: ['SLO', 'IZY', 2, 8],
-  0x14: ['NOP', 'ZPX', 2, 4],
-  0x15: ['ORA', 'ZPX', 2, 4],
-  0x16: ['ASL', 'ZPX', 2, 6],
-  0x17: ['SLO', 'ZPX', 2, 6],
-  0x18: ['CLC', 'IMP', 1, 2],
-  0x19: ['ORA', 'ABY', 3, 4],
-  0x1A: ['NOP', 'IMP', 1, 2],
-  0x1B: ['SLO', 'ABY', 3, 7],
-  0x1C: ['NOP', 'ABX', 3, 4],
-  0x1D: ['ORA', 'ABX', 3, 4],
-  0x1E: ['ASL', 'ABX', 3, 7],
-  0x1F: ['SLO', 'ABX', 3, 7],
-  0x20: ['JSR', 'ABS', 3, 6],
-  0x21: ['AND', 'IZX', 2, 6],
-  0x22: ['JAM', 'IMP', 1, 2],
-  0x23: ['RLA', 'IZX', 2, 8],
-  0x24: ['BIT', 'ZP0', 2, 3],
-  0x25: ['AND', 'ZP0', 2, 3],
-  0x26: ['ROL', 'ZP0', 2, 5],
-  0x27: ['RLA', 'ZP0', 2, 5],
-  0x28: ['PLP', 'IMP', 1, 4],
-  0x29: ['AND', 'IMM', 2, 2],
-  0x2A: ['ROL', 'IMP', 1, 2],
-  0x2B: ['ANC', 'IMM', 2, 2],
-  0x2C: ['BIT', 'ABS', 3, 4],
-  0x2D: ['AND', 'ABS', 3, 4],
-  0x2E: ['ROL', 'ABS', 3, 6],
-  0x2F: ['RLA', 'ABS', 3, 6],
-  0x30: ['BMI', 'REL', 2, 2],
-  0x31: ['AND', 'IZY', 2, 5],
-  0x32: ['JAM', 'IMP', 1, 2],
-  0x33: ['RLA', 'IZY', 2, 8],
-  0x34: ['NOP', 'ZPX', 2, 4],
-  0x35: ['AND', 'ZPX', 2, 4],
-  0x36: ['ROL', 'ZPX', 2, 6],
-  0x37: ['RLA', 'ZPX', 2, 6],
-  0x38: ['SEC', 'IMP', 1, 2],
-  0x39: ['AND', 'ABY', 3, 4],
-  0x3A: ['NOP', 'IMP', 1, 2],
-  0x3B: ['RLA', 'ABY', 3, 7],
-  0x3C: ['NOP', 'ABX', 3, 4],
-  0x3D: ['AND', 'ABX', 3, 4],
-  0x3E: ['ROL', 'ABX', 3, 7],
-  0x3F: ['RLA', 'ABX', 3, 7],
-  0x40: ['RTI', 'IMP', 1, 6],
-  0x41: ['EOR', 'IZX', 2, 6],
-  0x42: ['JAM', 'IMP', 1, 2],
-  0x43: ['SRE', 'IZX', 2, 8],
-  0x44: ['NOP', 'ZP0', 2, 3],
-  0x45: ['EOR', 'ZP0', 2, 3],
-  0x46: ['LSR', 'ZP0', 2, 5],
-  0x47: ['SRE', 'ZP0', 2, 5],
-  0x48: ['PHA', 'IMP', 1, 3],
-  0x49: ['EOR', 'IMM', 2, 2],
-  0x4A: ['LSR', 'IMP', 1, 2],
-  0x4B: ['ALR', 'IMM', 2, 2],
-  0x4C: ['JMP', 'ABS', 3, 3],
-  0x4D: ['EOR', 'ABS', 3, 4],
-  0x4E: ['LSR', 'ABS', 3, 6],
-  0x4F: ['SRE', 'ABS', 3, 6],
-  0x50: ['BVC', 'REL', 2, 2],
-  0x51: ['EOR', 'IZY', 2, 5],
-  0x52: ['JAM', 'IMP', 1, 2],
-  0x53: ['SRE', 'IZY', 2, 8],
-  0x54: ['NOP', 'ZPX', 2, 4],
-  0x55: ['EOR', 'ZPX', 2, 4],
-  0x56: ['LSR', 'ZPX', 2, 6],
-  0x57: ['SRE', 'ZPX', 2, 6],
-  0x58: ['CLI', 'IMP', 1, 2],
-  0x59: ['EOR', 'ABY', 3, 4],
-  0x5A: ['NOP', 'IMP', 1, 2],
-  0x5B: ['SRE', 'ABY', 3, 7],
-  0x5C: ['NOP', 'ABX', 3, 4],
-  0x5D: ['EOR', 'ABX', 3, 4],
-  0x5E: ['LSR', 'ABX', 3, 7],
-  0x5F: ['SRE', 'ABX', 3, 7],
-  0x60: ['RTS', 'IMP', 1, 6],
-  0x61: ['ADC', 'IZX', 2, 6],
-  0x62: ['JAM', 'IMP', 1, 2],
-  0x63: ['RRA', 'IZX', 2, 8],
-  0x64: ['NOP', 'ZP0', 2, 3],
-  0x65: ['ADC', 'ZP0', 2, 3],
-  0x66: ['ROR', 'ZP0', 2, 5],
-  0x67: ['RRA', 'ZP0', 2, 5],
-  0x68: ['PLA', 'IMP', 1, 4],
-  0x69: ['ADC', 'IMM', 2, 2],
-  0x6A: ['ROR', 'IMP', 1, 2],
-  0x6B: ['ARR', 'IMM', 2, 2],
-  0x6C: ['JMP', 'IND', 3, 5],
-  0x6D: ['ADC', 'ABS', 3, 4],
-  0x6E: ['ROR', 'ABS', 3, 6],
-  0x6F: ['RRA', 'ABS', 3, 6],
-  0x70: ['BVS', 'REL', 2, 2],
-  0x71: ['ADC', 'IZY', 2, 5],
-  0x72: ['JAM', 'IMP', 1, 2],
-  0x73: ['RRA', 'IZY', 2, 8],
-  0x74: ['NOP', 'ZPX', 2, 4],
-  0x75: ['ADC', 'ZPX', 2, 4],
-  0x76: ['ROR', 'ZPX', 2, 6],
-  0x77: ['RRA', 'ZPX', 2, 6],
-  0x78: ['SEI', 'IMP', 1, 2],
-  0x79: ['ADC', 'ABY', 3, 4],
-  0x7A: ['NOP', 'IMP', 1, 2],
-  0x7B: ['RRA', 'ABY', 3, 7],
-  0x7C: ['NOP', 'ABX', 3, 4],
-  0x7D: ['ADC', 'ABX', 3, 4],
-  0x7E: ['ROR', 'ABX', 3, 7],
-  0x7F: ['RRA', 'ABX', 3, 7],
-  0x80: ['NOP', 'IMM', 2, 2],
-  0x81: ['STA', 'IZX', 2, 6],
-  0x82: ['NOP', 'IMM', 2, 2],
-  0x83: ['SAX', 'IZX', 2, 6],
-  0x84: ['STY', 'ZP0', 2, 3],
-  0x85: ['STA', 'ZP0', 2, 3],
-  0x86: ['STX', 'ZP0', 2, 3],
-  0x87: ['SAX', 'ZP0', 2, 3],
-  0x88: ['DEY', 'IMP', 1, 2],
-  0x89: ['NOP', 'IMM', 2, 2],
-  0x8A: ['TXA', 'IMP', 1, 2],
-  0x8B: ['XAA', 'IMM', 2, 2],
-  0x8C: ['STY', 'ABS', 3, 4],
-  0x8D: ['STA', 'ABS', 3, 4],
-  0x8E: ['STX', 'ABS', 3, 4],
-  0x8F: ['SAX', 'ABS', 3, 4],
-  0x90: ['BCC', 'REL', 2, 2],
-  0x91: ['STA', 'IZY', 2, 6],
-  0x92: ['JAM', 'IMP', 1, 2],
-  0x93: ['SHA', 'IZY', 2, 6],
-  0x94: ['STY', 'ZPX', 2, 4],
-  0x95: ['STA', 'ZPX', 2, 4],
-  0x96: ['STX', 'ZPY', 2, 4],
-  0x97: ['SAX', 'ZPY', 2, 4],
-  0x98: ['TYA', 'IMP', 1, 2],
-  0x99: ['STA', 'ABY', 3, 5],
-  0x9A: ['TXS', 'IMP', 1, 2],
-  0x9B: ['TAS', 'ABY', 3, 5],
-  0x9C: ['SHY', 'ABX', 3, 5],
-  0x9D: ['STA', 'ABX', 3, 5],
-  0x9E: ['SHX', 'ABY', 3, 5],
-  0x9F: ['SHA', 'ABY', 3, 5],
-  0xA0: ['LDY', 'IMM', 2, 2],
-  0xA1: ['LDA', 'IZX', 2, 6],
-  0xA2: ['LDX', 'IMM', 2, 2],
-  0xA3: ['LAX', 'IZX', 2, 6],
-  0xA4: ['LDY', 'ZP0', 2, 3],
-  0xA5: ['LDA', 'ZP0', 2, 3],
-  0xA6: ['LDX', 'ZP0', 2, 3],
-  0xA7: ['LAX', 'ZP0', 2, 3],
-  0xA8: ['TAY', 'IMP', 1, 2],
-  0xA9: ['LDA', 'IMM', 2, 2],
-  0xAA: ['TAX', 'IMP', 1, 2],
-  0xAB: ['LXA', 'IMM', 2, 2],
-  0xAC: ['LDY', 'ABS', 3, 4],
-  0xAD: ['LDA', 'ABS', 3, 4],
-  0xAE: ['LDX', 'ABS', 3, 4],
-  0xAF: ['LAX', 'ABS', 3, 4],
-  0xB0: ['BCS', 'REL', 2, 2],
-  0xB1: ['LDA', 'IZY', 2, 5],
-  0xB2: ['JAM', 'IMP', 1, 2],
-  0xB3: ['LAX', 'IZY', 2, 5],
-  0xB4: ['LDY', 'ZPX', 2, 4],
-  0xB5: ['LDA', 'ZPX', 2, 4],
-  0xB6: ['LDX', 'ZPY', 2, 4],
-  0xB7: ['LAX', 'ZPY', 2, 4],
-  0xB8: ['CLV', 'IMP', 1, 2],
-  0xB9: ['LDA', 'ABY', 3, 4],
-  0xBA: ['TSX', 'IMP', 1, 2],
-  0xBB: ['LAS', 'ABY', 3, 4],
-  0xBC: ['LDY', 'ABX', 3, 4],
-  0xBD: ['LDA', 'ABX', 3, 4],
-  0xBE: ['LDX', 'ABY', 3, 4],
-  0xBF: ['LAX', 'ABY', 3, 4],
-  0xC0: ['CPY', 'IMM', 2, 2],
-  0xC1: ['CMP', 'IZX', 2, 6],
-  0xC2: ['NOP', 'IMM', 2, 2],
-  0xC3: ['DCP', 'IZX', 2, 8],
-  0xC4: ['CPY', 'ZP0', 2, 3],
-  0xC5: ['CMP', 'ZP0', 2, 3],
-  0xC6: ['DEC', 'ZP0', 2, 5],
-  0xC7: ['DCP', 'ZP0', 2, 5],
-  0xC8: ['INY', 'IMP', 1, 2],
-  0xC9: ['CMP', 'IMM', 2, 2],
-  0xCA: ['DEX', 'IMP', 1, 2],
-  0xCB: ['AXS', 'IMM', 2, 2],
-  0xCC: ['CPY', 'ABS', 3, 4],
-  0xCD: ['CMP', 'ABS', 3, 4],
-  0xCE: ['DEC', 'ABS', 3, 6],
-  0xCF: ['DCP', 'ABS', 3, 6],
-  0xD0: ['BNE', 'REL', 2, 2],
-  0xD1: ['CMP', 'IZY', 2, 5],
-  0xD2: ['JAM', 'IMP', 1, 2],
-  0xD3: ['DCP', 'IZY', 2, 8],
-  0xD4: ['NOP', 'ZPX', 2, 4],
-  0xD5: ['CMP', 'ZPX', 2, 4],
-  0xD6: ['DEC', 'ZPX', 2, 6],
-  0xD7: ['DCP', 'ZPX', 2, 6],
-  0xD8: ['CLD', 'IMP', 1, 2],
-  0xD9: ['CMP', 'ABY', 3, 4],
-  0xDA: ['NOP', 'IMP', 1, 2],
-  0xDB: ['DCP', 'ABY', 3, 7],
-  0xDC: ['NOP', 'ABX', 3, 4],
-  0xDD: ['CMP', 'ABX', 3, 4],
-  0xDE: ['DEC', 'ABX', 3, 7],
-  0xDF: ['DCP', 'ABX', 3, 7],
-  0xE0: ['CPX', 'IMM', 2, 2],
-  0xE1: ['SBC', 'IZX', 2, 6],
-  0xE2: ['NOP', 'IMM', 2, 2],
-  0xE3: ['ISC', 'IZX', 2, 8],
-  0xE4: ['CPX', 'ZP0', 2, 3],
-  0xE5: ['SBC', 'ZP0', 2, 3],
-  0xE6: ['INC', 'ZP0', 2, 5],
-  0xE7: ['ISC', 'ZP0', 2, 5],
-  0xE8: ['INX', 'IMP', 1, 2],
-  0xE9: ['SBC', 'IMM', 2, 2],
-  0xEA: ['NOP', 'IMP', 1, 2],
-  0xEB: ['SBC', 'IMM', 2, 2],
-  0xEC: ['CPX', 'ABS', 3, 4],
-  0xED: ['SBC', 'ABS', 3, 4],
-  0xEE: ['INC', 'ABS', 3, 6],
-  0xEF: ['ISC', 'ABS', 3, 6],
-  0xF0: ['BEQ', 'REL', 2, 2],
-  0xF1: ['SBC', 'IZY', 2, 5],
-  0xF2: ['JAM', 'IMP', 1, 2],
-  0xF3: ['ISC', 'IZY', 2, 8],
-  0xF4: ['NOP', 'ZPX', 2, 4],
-  0xF5: ['SBC', 'ZPX', 2, 4],
-  0xF6: ['INC', 'ZPX', 2, 6],
-  0xF7: ['ISC', 'ZPX', 2, 6],
-  0xF8: ['SED', 'IMP', 1, 2],
-  0xF9: ['SBC', 'ABY', 3, 4],
-  0xFA: ['NOP', 'IMP', 1, 2],
-  0xFB: ['ISC', 'ABY', 3, 7],
-  0xFC: ['NOP', 'ABX', 3, 4],
-  0xFD: ['SBC', 'ABX', 3, 4],
-  0xFE: ['INC', 'ABX', 3, 7],
-  0xFF: ['ISC', 'ABX', 3, 7],
-};
+export const instructions: readonly Instruction[] = [
+  ['BRK', 'IMP', 1, 7], // 00
+  ['ORA', 'IZX', 2, 6], // 01
+  ['JAM', 'IMP', 1, 2], // 02
+  ['SLO', 'IZX', 2, 8], // 03
+  ['NOP', 'ZP0', 2, 3], // 04
+  ['ORA', 'ZP0', 2, 3], // 05
+  ['ASL', 'ZP0', 2, 5], // 06
+  ['SLO', 'ZP0', 2, 5], // 07
+  ['PHP', 'IMP', 1, 3], // 08
+  ['ORA', 'IMM', 2, 2], // 09
+  ['ASL', 'IMP', 1, 2], // 0A
+  ['ANC', 'IMM', 2, 2], // 0B
+  ['NOP', 'ABS', 3, 4], // 0C
+  ['ORA', 'ABS', 3, 4], // 0D
+  ['ASL', 'ABS', 3, 6], // 0E
+  ['SLO', 'ABS', 3, 6], // 0F
+  ['BPL', 'REL', 2, 2], // 10
+  ['ORA', 'IZY', 2, 5], // 11
+  ['JAM', 'IMP', 1, 2], // 12
+  ['SLO', 'IZY', 2, 8], // 13
+  ['NOP', 'ZPX', 2, 4], // 14
+  ['ORA', 'ZPX', 2, 4], // 15
+  ['ASL', 'ZPX', 2, 6], // 16
+  ['SLO', 'ZPX', 2, 6], // 17
+  ['CLC', 'IMP', 1, 2], // 18
+  ['ORA', 'ABY', 3, 4], // 19
+  ['NOP', 'IMP', 1, 2], // 1A
+  ['SLO', 'ABY', 3, 7], // 1B
+  ['NOP', 'ABX', 3, 4], // 1C
+  ['ORA', 'ABX', 3, 4], // 1D
+  ['ASL', 'ABX', 3, 7], // 1E
+  ['SLO', 'ABX', 3, 7], // 1F
+  ['JSR', 'ABS', 3, 6], // 20
+  ['AND', 'IZX', 2, 6], // 21
+  ['JAM', 'IMP', 1, 2], // 22
+  ['RLA', 'IZX', 2, 8], // 23
+  ['BIT', 'ZP0', 2, 3], // 24
+  ['AND', 'ZP0', 2, 3], // 25
+  ['ROL', 'ZP0', 2, 5], // 26
+  ['RLA', 'ZP0', 2, 5], // 27
+  ['PLP', 'IMP', 1, 4], // 28
+  ['AND', 'IMM', 2, 2], // 29
+  ['ROL', 'IMP', 1, 2], // 2A
+  ['ANC', 'IMM', 2, 2], // 2B
+  ['BIT', 'ABS', 3, 4], // 2C
+  ['AND', 'ABS', 3, 4], // 2D
+  ['ROL', 'ABS', 3, 6], // 2E
+  ['RLA', 'ABS', 3, 6], // 2F
+  ['BMI', 'REL', 2, 2], // 30
+  ['AND', 'IZY', 2, 5], // 31
+  ['JAM', 'IMP', 1, 2], // 32
+  ['RLA', 'IZY', 2, 8], // 33
+  ['NOP', 'ZPX', 2, 4], // 34
+  ['AND', 'ZPX', 2, 4], // 35
+  ['ROL', 'ZPX', 2, 6], // 36
+  ['RLA', 'ZPX', 2, 6], // 37
+  ['SEC', 'IMP', 1, 2], // 38
+  ['AND', 'ABY', 3, 4], // 39
+  ['NOP', 'IMP', 1, 2], // 3A
+  ['RLA', 'ABY', 3, 7], // 3B
+  ['NOP', 'ABX', 3, 4], // 3C
+  ['AND', 'ABX', 3, 4], // 3D
+  ['ROL', 'ABX', 3, 7], // 3E
+  ['RLA', 'ABX', 3, 7], // 3F
+  ['RTI', 'IMP', 1, 6], // 40
+  ['EOR', 'IZX', 2, 6], // 41
+  ['JAM', 'IMP', 1, 2], // 42
+  ['SRE', 'IZX', 2, 8], // 43
+  ['NOP', 'ZP0', 2, 3], // 44
+  ['EOR', 'ZP0', 2, 3], // 45
+  ['LSR', 'ZP0', 2, 5], // 46
+  ['SRE', 'ZP0', 2, 5], // 47
+  ['PHA', 'IMP', 1, 3], // 48
+  ['EOR', 'IMM', 2, 2], // 49
+  ['LSR', 'IMP', 1, 2], // 4A
+  ['ALR', 'IMM', 2, 2], // 4B
+  ['JMP', 'ABS', 3, 3], // 4C
+  ['EOR', 'ABS', 3, 4], // 4D
+  ['LSR', 'ABS', 3, 6], // 4E
+  ['SRE', 'ABS', 3, 6], // 4F
+  ['BVC', 'REL', 2, 2], // 50
+  ['EOR', 'IZY', 2, 5], // 51
+  ['JAM', 'IMP', 1, 2], // 52
+  ['SRE', 'IZY', 2, 8], // 53
+  ['NOP', 'ZPX', 2, 4], // 54
+  ['EOR', 'ZPX', 2, 4], // 55
+  ['LSR', 'ZPX', 2, 6], // 56
+  ['SRE', 'ZPX', 2, 6], // 57
+  ['CLI', 'IMP', 1, 2], // 58
+  ['EOR', 'ABY', 3, 4], // 59
+  ['NOP', 'IMP', 1, 2], // 5A
+  ['SRE', 'ABY', 3, 7], // 5B
+  ['NOP', 'ABX', 3, 4], // 5C
+  ['EOR', 'ABX', 3, 4], // 5D
+  ['LSR', 'ABX', 3, 7], // 5E
+  ['SRE', 'ABX', 3, 7], // 5F
+  ['RTS', 'IMP', 1, 6], // 60
+  ['ADC', 'IZX', 2, 6], // 61
+  ['JAM', 'IMP', 1, 2], // 62
+  ['RRA', 'IZX', 2, 8], // 63
+  ['NOP', 'ZP0', 2, 3], // 64
+  ['ADC', 'ZP0', 2, 3], // 65
+  ['ROR', 'ZP0', 2, 5], // 66
+  ['RRA', 'ZP0', 2, 5], // 67
+  ['PLA', 'IMP', 1, 4], // 68
+  ['ADC', 'IMM', 2, 2], // 69
+  ['ROR', 'IMP', 1, 2], // 6A
+  ['ARR', 'IMM', 2, 2], // 6B
+  ['JMP', 'IND', 3, 5], // 6C
+  ['ADC', 'ABS', 3, 4], // 6D
+  ['ROR', 'ABS', 3, 6], // 6E
+  ['RRA', 'ABS', 3, 6], // 6F
+  ['BVS', 'REL', 2, 2], // 70
+  ['ADC', 'IZY', 2, 5], // 71
+  ['JAM', 'IMP', 1, 2], // 72
+  ['RRA', 'IZY', 2, 8], // 73
+  ['NOP', 'ZPX', 2, 4], // 74
+  ['ADC', 'ZPX', 2, 4], // 75
+  ['ROR', 'ZPX', 2, 6], // 76
+  ['RRA', 'ZPX', 2, 6], // 77
+  ['SEI', 'IMP', 1, 2], // 78
+  ['ADC', 'ABY', 3, 4], // 79
+  ['NOP', 'IMP', 1, 2], // 7A
+  ['RRA', 'ABY', 3, 7], // 7B
+  ['NOP', 'ABX', 3, 4], // 7C
+  ['ADC', 'ABX', 3, 4], // 7D
+  ['ROR', 'ABX', 3, 7], // 7E
+  ['RRA', 'ABX', 3, 7], // 7F
+  ['NOP', 'IMM', 2, 2], // 80
+  ['STA', 'IZX', 2, 6], // 81
+  ['NOP', 'IMM', 2, 2], // 82
+  ['SAX', 'IZX', 2, 6], // 83
+  ['STY', 'ZP0', 2, 3], // 84
+  ['STA', 'ZP0', 2, 3], // 85
+  ['STX', 'ZP0', 2, 3], // 86
+  ['SAX', 'ZP0', 2, 3], // 87
+  ['DEY', 'IMP', 1, 2], // 88
+  ['NOP', 'IMM', 2, 2], // 89
+  ['TXA', 'IMP', 1, 2], // 8A
+  ['XAA', 'IMM', 2, 2], // 8B
+  ['STY', 'ABS', 3, 4], // 8C
+  ['STA', 'ABS', 3, 4], // 8D
+  ['STX', 'ABS', 3, 4], // 8E
+  ['SAX', 'ABS', 3, 4], // 8F
+  ['BCC', 'REL', 2, 2], // 90
+  ['STA', 'IZY', 2, 6], // 91
+  ['JAM', 'IMP', 1, 2], // 92
+  ['SHA', 'IZY', 2, 6], // 93
+  ['STY', 'ZPX', 2, 4], // 94
+  ['STA', 'ZPX', 2, 4], // 95
+  ['STX', 'ZPY', 2, 4], // 96
+  ['SAX', 'ZPY', 2, 4], // 97
+  ['TYA', 'IMP', 1, 2], // 98
+  ['STA', 'ABY', 3, 5], // 99
+  ['TXS', 'IMP', 1, 2], // 9A
+  ['TAS', 'ABY', 3, 5], // 9B
+  ['SHY', 'ABX', 3, 5], // 9C
+  ['STA', 'ABX', 3, 5], // 9D
+  ['SHX', 'ABY', 3, 5], // 9E
+  ['SHA', 'ABY', 3, 5], // 9F
+  ['LDY', 'IMM', 2, 2], // A0
+  ['LDA', 'IZX', 2, 6], // A1
+  ['LDX', 'IMM', 2, 2], // A2
+  ['LAX', 'IZX', 2, 6], // A3
+  ['LDY', 'ZP0', 2, 3], // A4
+  ['LDA', 'ZP0', 2, 3], // A5
+  ['LDX', 'ZP0', 2, 3], // A6
+  ['LAX', 'ZP0', 2, 3], // A7
+  ['TAY', 'IMP', 1, 2], // A8
+  ['LDA', 'IMM', 2, 2], // A9
+  ['TAX', 'IMP', 1, 2], // AA
+  ['LXA', 'IMM', 2, 2], // AB
+  ['LDY', 'ABS', 3, 4], // AC
+  ['LDA', 'ABS', 3, 4], // AD
+  ['LDX', 'ABS', 3, 4], // AE
+  ['LAX', 'ABS', 3, 4], // AF
+  ['BCS', 'REL', 2, 2], // B0
+  ['LDA', 'IZY', 2, 5], // B1
+  ['JAM', 'IMP', 1, 2], // B2
+  ['LAX', 'IZY', 2, 5], // B3
+  ['LDY', 'ZPX', 2, 4], // B4
+  ['LDA', 'ZPX', 2, 4], // B5
+  ['LDX', 'ZPY', 2, 4], // B6
+  ['LAX', 'ZPY', 2, 4], // B7
+  ['CLV', 'IMP', 1, 2], // B8
+  ['LDA', 'ABY', 3, 4], // B9
+  ['TSX', 'IMP', 1, 2], // BA
+  ['LAS', 'ABY', 3, 4], // BB
+  ['LDY', 'ABX', 3, 4], // BC
+  ['LDA', 'ABX', 3, 4], // BD
+  ['LDX', 'ABY', 3, 4], // BE
+  ['LAX', 'ABY', 3, 4], // BF
+  ['CPY', 'IMM', 2, 2], // C0
+  ['CMP', 'IZX', 2, 6], // C1
+  ['NOP', 'IMM', 2, 2], // C2
+  ['DCP', 'IZX', 2, 8], // C3
+  ['CPY', 'ZP0', 2, 3], // C4
+  ['CMP', 'ZP0', 2, 3], // C5
+  ['DEC', 'ZP0', 2, 5], // C6
+  ['DCP', 'ZP0', 2, 5], // C7
+  ['INY', 'IMP', 1, 2], // C8
+  ['CMP', 'IMM', 2, 2], // C9
+  ['DEX', 'IMP', 1, 2], // CA
+  ['AXS', 'IMM', 2, 2], // CB
+  ['CPY', 'ABS', 3, 4], // CC
+  ['CMP', 'ABS', 3, 4], // CD
+  ['DEC', 'ABS', 3, 6], // CE
+  ['DCP', 'ABS', 3, 6], // CF
+  ['BNE', 'REL', 2, 2], // D0
+  ['CMP', 'IZY', 2, 5], // D1
+  ['JAM', 'IMP', 1, 2], // D2
+  ['DCP', 'IZY', 2, 8], // D3
+  ['NOP', 'ZPX', 2, 4], // D4
+  ['CMP', 'ZPX', 2, 4], // D5
+  ['DEC', 'ZPX', 2, 6], // D6
+  ['DCP', 'ZPX', 2, 6], // D7
+  ['CLD', 'IMP', 1, 2], // D8
+  ['CMP', 'ABY', 3, 4], // D9
+  ['NOP', 'IMP', 1, 2], // DA
+  ['DCP', 'ABY', 3, 7], // DB
+  ['NOP', 'ABX', 3, 4], // DC
+  ['CMP', 'ABX', 3, 4], // DD
+  ['DEC', 'ABX', 3, 7], // DE
+  ['DCP', 'ABX', 3, 7], // DF
+  ['CPX', 'IMM', 2, 2], // E0
+  ['SBC', 'IZX', 2, 6], // E1
+  ['NOP', 'IMM', 2, 2], // E2
+  ['ISC', 'IZX', 2, 8], // E3
+  ['CPX', 'ZP0', 2, 3], // E4
+  ['SBC', 'ZP0', 2, 3], // E5
+  ['INC', 'ZP0', 2, 5], // E6
+  ['ISC', 'ZP0', 2, 5], // E7
+  ['INX', 'IMP', 1, 2], // E8
+  ['SBC', 'IMM', 2, 2], // E9
+  ['NOP', 'IMP', 1, 2], // EA
+  ['SBC', 'IMM', 2, 2], // EB
+  ['CPX', 'ABS', 3, 4], // EC
+  ['SBC', 'ABS', 3, 4], // ED
+  ['INC', 'ABS', 3, 6], // EE
+  ['ISC', 'ABS', 3, 6], // EF
+  ['BEQ', 'REL', 2, 2], // F0
+  ['SBC', 'IZY', 2, 5], // F1
+  ['JAM', 'IMP', 1, 2], // F2
+  ['ISC', 'IZY', 2, 8], // F3
+  ['NOP', 'ZPX', 2, 4], // F4
+  ['SBC', 'ZPX', 2, 4], // F5
+  ['INC', 'ZPX', 2, 6], // F6
+  ['ISC', 'ZPX', 2, 6], // F7
+  ['SED', 'IMP', 1, 2], // F8
+  ['SBC', 'ABY', 3, 4], // F9
+  ['NOP', 'IMP', 1, 2], // FA
+  ['ISC', 'ABY', 3, 7], // FB
+  ['NOP', 'ABX', 3, 4], // FC
+  ['SBC', 'ABX', 3, 4], // FD
+  ['INC', 'ABX', 3, 7], // FE
+  ['ISC', 'ABX', 3, 7], // FF
+];

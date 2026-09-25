@@ -1,4 +1,4 @@
-import Mapper, { type MappedAddress } from './mapper';
+import Mapper from './mapper';
 import { MIRROR, type Mirror } from '../constants';
 
 const PRG_BANK_SIZE = 0x4000;
@@ -9,15 +9,15 @@ const SHIFT_EMPTY = 0x10;
 const CONTROL_RESET = 0x0C;
 
 // MMC1, see https://www.nesdev.org/wiki/MMC1
-class Mapper_001 extends Mapper {
+class Mmc1 extends Mapper {
     private shift = SHIFT_EMPTY;
     private control = CONTROL_RESET;
     private chrBank0 = 0;
     private chrBank1 = 0;
     private prgBank = 0;
 
-    cpuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr < 0x8000 || addr > 0xFFFF) return false;
+    cpuMapRead(addr: number): number | null {
+        if (addr < 0x8000 || addr > 0xFFFF) return null;
 
         const upper = addr >= 0xC000;
         let bank: number;
@@ -35,10 +35,9 @@ class Mapper_001 extends Mapper {
                 break;
         }
         // 512KB boards (SUROM) select the 256KB half with bit 4 of the CHR bank
-        if (this._nPRGBanks > 16) bank |= this.chrBank0 & 0x10;
+        if (this.prgRomBanks > 16) bank |= this.chrBank0 & 0x10;
 
-        object.mapped_addr = (bank % this._nPRGBanks) * PRG_BANK_SIZE + (addr & (PRG_BANK_SIZE - 1));
-        return true;
+        return (bank % this.prgRomBanks) * PRG_BANK_SIZE + (addr & (PRG_BANK_SIZE - 1));
     }
 
     // Registers are loaded one bit at a time over five writes, LSB first
@@ -75,23 +74,15 @@ class Mapper_001 extends Mapper {
             bank = (this.chrBank0 & 0x1E) | (addr >= 0x1000 ? 1 : 0);
         }
         // Boards with CHR RAM have 8KB of it
-        const banks = Math.max(this._nCHRBanks, 1) * 2;
+        const banks = Math.max(this.chrRomBanks, 1) * 2;
         return (bank % banks) * CHR_BANK_SIZE + (addr & (CHR_BANK_SIZE - 1));
     }
 
-    ppuMapRead(addr: number, object: MappedAddress): boolean {
-        if (addr > 0x1FFF) return false;
-        object.mapped_addr = this.chrOffset(addr);
-        return true;
+    ppuMapRead(addr: number): number | null {
+        return addr <= 0x1FFF ? this.chrOffset(addr) : null;
     }
 
-    ppuMapWrite(addr: number, object: MappedAddress): boolean {
-        if (addr > 0x1FFF || this._nCHRBanks !== 0) return false;
-        object.mapped_addr = this.chrOffset(addr);
-        return true;
-    }
-
-    mirror(): Mirror {
+    override mirror(): Mirror {
         switch (this.control & 0x03) {
             case 0: return MIRROR.ONESCREEN_LO;
             case 1: return MIRROR.ONESCREEN_HI;
@@ -101,10 +92,10 @@ class Mapper_001 extends Mapper {
     }
 
     // The reset button only resets the shift register and the PRG mode
-    reset(): void {
+    override reset(): void {
         this.shift = SHIFT_EMPTY;
         this.control |= CONTROL_RESET;
     }
 }
 
-export default Mapper_001;
+export default Mmc1;

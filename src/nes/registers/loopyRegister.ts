@@ -1,29 +1,27 @@
 // See https://www.nesdev.org/wiki/PPU_scrolling
 class LoopyRegister {
-    coarse_x = 0;
-    coarse_y = 0;
-    nametable_x = 0;
-    nametable_y = 0;
-    fine_y = 0;
+    coarseX = 0;
+    coarseY = 0;
+    nametableX = 0;
+    nametableY = 0;
+    fineY = 0;
     unused = 0;
 
     get reg(): number {
-        let value = 0;
-        value = value | ((this.coarse_x & 0x1F) << 0);
-        value = value | ((this.coarse_y & 0x1F) << 5);
-        value = value | ((this.nametable_x & 1) << 10);
-        value = value | ((this.nametable_y & 1) << 11);
-        value = value | ((this.fine_y & 0x07) << 12);
-        value = value | ((this.unused & 1) << 15);
-        return value;
+        return (this.coarseX & 0x1F)
+            | ((this.coarseY & 0x1F) << 5)
+            | ((this.nametableX & 1) << 10)
+            | ((this.nametableY & 1) << 11)
+            | ((this.fineY & 0x07) << 12)
+            | ((this.unused & 1) << 15);
     }
 
     set reg(value: number) {
-        this.coarse_x = (value >> 0) & 0x1F;
-        this.coarse_y = (value >> 5) & 0x1F;
-        this.nametable_x = (value >> 10) & 1;
-        this.nametable_y = (value >> 11) & 1;
-        this.fine_y = (value >> 12) & 0x07;
+        this.coarseX = value & 0x1F;
+        this.coarseY = (value >> 5) & 0x1F;
+        this.nametableX = (value >> 10) & 1;
+        this.nametableY = (value >> 11) & 1;
+        this.fineY = (value >> 12) & 0x07;
         this.unused = (value >> 15) & 1;
     }
 }

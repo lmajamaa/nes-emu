@@ -21,7 +21,7 @@ function encodeFileName(fileName: string): string {
     return encodeURI(fileName).replace(/[?#]/g, encodeURIComponent);
 }
 
-const bundled =[entry('nestest.nes', nestestUrl)];
+const bundled = [entry('nestest.nes', nestestUrl)];
 // ROMs dropped into public/roms, which is git ignored
 const local = romFiles.map(fileName => entry(fileName, `${import.meta.env.BASE_URL}roms/${encodeFileName(fileName)}`));
 

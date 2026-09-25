@@ -74,7 +74,7 @@ describe('nestest.nes menu', () => {
     }
 
     function menuRow(bus: Bus, row: number): string {
-        return String.fromCharCode(...bus.ppu.tblName[0].slice(row * 32, row * 32 + 32));
+        return String.fromCharCode(...bus.ppu.nametables[0].slice(row * 32, row * 32 + 32));
     }
 
     test('Down moves the cursor', () => {

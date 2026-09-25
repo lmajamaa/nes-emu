@@ -6,7 +6,6 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import Bus from '../src/nes/bus';
 import Cartridge from '../src/nes/cartridge';
-import { palScreen } from '../src/nes/graphics';
 import { buildRom, muteConsole, NESTEST_ROM as ROM } from './helpers';
 
 const FRAMES = 10;
@@ -20,31 +19,31 @@ describe('PPU background rendering (nestest.nes menu)', () => {
         bus.insertCartridge(new Cartridge(readFileSync(ROM)));
         bus.reset();
         for (let frame = 0; frame < FRAMES; frame++) {
-            do { bus.clock(); } while (!bus.ppu.frame_complete);
-            bus.ppu.frame_complete = false;
+            do { bus.clock(); } while (!bus.ppu.frameComplete);
+            bus.ppu.frameComplete = false;
         }
     });
 
     test('menu text is in the nametable', () => {
-        const nametable = bus.ppu.tblName[0];
-        const row = nametable.slice(4 * 32, 5 * 32).map(c => String.fromCharCode(c)).join('');
+        const nametable = bus.ppu.nametables[0];
+        const row = String.fromCharCode(...nametable.subarray(4 * 32, 5 * 32));
         expect(row).toContain('Run all tests');
     });
 
     test('rendering is enabled', () => {
-        expect(bus.ppu.mask.render_background).toBe(1);
+        expect(bus.ppu.mask.renderBackground).toBe(1);
     });
 
     test('screen matches the nametable tiles', () => {
         const ppu = bus.ppu;
-        const screen = ppu.getScreen();
-        const backdrop = ppu.getColorFromPaletteRam(0, 0);
-        const patternBase = ppu.control.pattern_background << 12;
+        const screen = ppu.screen;
+        const backdrop = ppu.colorOf(0, 0);
+        const patternBase = ppu.control.patternBackground << 12;
 
         const mismatches = [];
         for (let row = 0; row < 30; row++) {
             for (let col = 0; col < 32; col++) {
-                const tile = ppu.tblName[0][row * 32 + col];
+                const tile = ppu.nametables[0][row * 32 + col];
                 for (let y = 0; y < 8; y++) {
                     const lsb = ppu.ppuRead(patternBase + tile * 16 + y);
                     const msb = ppu.ppuRead(patternBase + tile * 16 + y + 8);
@@ -72,6 +71,6 @@ describe('palette RAM', () => {
 
         expect(bus.ppu.ppuRead(0x3F00)).toBe(0x3F);
         expect(bus.ppu.ppuRead(0x3F11)).toBe(0x01);
-        expect(bus.ppu.getColorFromPaletteRam(0, 0)).toBe(palScreen[0x3F]);
+        expect(bus.ppu.colorOf(0, 0)).toBe(0x3F);
     });
 });

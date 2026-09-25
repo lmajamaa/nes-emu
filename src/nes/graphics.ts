@@ -1,102 +1,49 @@
-export class Pixel {
-    constructor(
-        readonly r: number,
-        readonly g: number,
-        readonly b: number,
-    ) {}
+import { hex } from '../utils';
+
+// The RGB of each of the 64 colours the PPU can output
+export const PALETTE: readonly number[] = [
+    0x545454, 0x001E74, 0x081090, 0x300088, 0x440064, 0x5C0030, 0x540400, 0x3C1800,
+    0x202A00, 0x083A00, 0x004000, 0x003C00, 0x00323C, 0x000000, 0x000000, 0x000000,
+    0x989698, 0x084CC4, 0x3032EC, 0x5C1EE4, 0x8814B0, 0xA01464, 0x982220, 0x783C00,
+    0x545A00, 0x287200, 0x087C00, 0x007628, 0x006678, 0x000000, 0x000000, 0x000000,
+    0xECEEEC, 0x4C9AEC, 0x787CEC, 0xB062EC, 0xE454EC, 0xEC58B4, 0xEC6A64, 0xD48820,
+    0xA0AA00, 0x74C400, 0x4CD020, 0x38CC6C, 0x38B4CC, 0x3C3C3C, 0x000000, 0x000000,
+    0xECEEEC, 0xA8CCEC, 0xBCBCEC, 0xD4B2EC, 0xECAEEC, 0xECAED4, 0xECB4B0, 0xE4C490,
+    0xCCD278, 0xB4DE78, 0xA8E290, 0x98E2B4, 0xA0D6E4, 0xA0A2A0, 0x000000, 0x000000,
+];
+
+// As RGBA pixels of ImageData, which are ABGR words on little-endian machines
+const PALETTE_ABGR = Uint32Array.from(PALETTE, rgb => 0xFF000000 | ((rgb & 0xFF) << 16) | (rgb & 0xFF00) | (rgb >> 16));
+
+export function cssColor(color: number): string {
+    return `#${hex(PALETTE[color & 0x3F], 6)}`;
 }
 
-export class Sprite {
+// An image in the colours of PALETTE, like the PPU outputs
+export class IndexedImage {
     readonly width: number;
     readonly height: number;
-    private readonly content: Pixel[][];
+    readonly pixels: Uint8Array;
 
     constructor(width: number, height: number) {
         this.width = width;
         this.height = height;
-
-        // Every column needs its own array, fill() would share a single one
-        const black = new Pixel(0, 0, 0);
-        this.content = Array.from({ length: width + 1 }, () => Array(height + 1).fill(black));
+        this.pixels = new Uint8Array(width * height);
     }
 
-    getPixel(x: number, y: number): Pixel {
-        return this.content[x][y];
+    getPixel(x: number, y: number): number {
+        return this.pixels[y * this.width + x];
     }
 
-    setPixel(x: number, y: number, pixel: Pixel): void {
-        if (x >= 0 && y >= 0 && x <= this.width && y <= this.height) {
-            this.content[x][y] = pixel;
+    setPixel(x: number, y: number, color: number): void {
+        if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
+            this.pixels[y * this.width + x] = color;
         }
     }
+
+    // Into ImageData's pixels, which must be the same size
+    toRgba(target: Uint8ClampedArray): void {
+        const out = new Uint32Array(target.buffer, target.byteOffset, this.pixels.length);
+        for (let i = 0; i < this.pixels.length; i++) out[i] = PALETTE_ABGR[this.pixels[i]];
+    }
 }
-
-export const palScreen: readonly Pixel[] = [
-    new Pixel(84, 84, 84),
-    new Pixel(0, 30, 116),
-    new Pixel(8, 16, 144),
-    new Pixel(48, 0, 136),
-    new Pixel(68, 0, 100),
-    new Pixel(92, 0, 48),
-    new Pixel(84, 4, 0),
-    new Pixel(60, 24, 0),
-    new Pixel(32, 42, 0),
-    new Pixel(8, 58, 0),
-    new Pixel(0, 64, 0),
-    new Pixel(0, 60, 0),
-    new Pixel(0, 50, 60),
-    new Pixel(0, 0, 0),
-    new Pixel(0, 0, 0),
-    new Pixel(0, 0, 0),
-
-    new Pixel(152, 150, 152),
-    new Pixel(8, 76, 196),
-    new Pixel(48, 50, 236),
-    new Pixel(92, 30, 228),
-    new Pixel(136, 20, 176),
-    new Pixel(160, 20, 100),
-    new Pixel(152, 34, 32),
-    new Pixel(120, 60, 0),
-    new Pixel(84, 90, 0),
-    new Pixel(40, 114, 0),
-    new Pixel(8, 124, 0),
-    new Pixel(0, 118, 40),
-    new Pixel(0, 102, 120),
-    new Pixel(0, 0, 0),
-    new Pixel(0, 0, 0),
-    new Pixel(0, 0, 0),
-
-    new Pixel(236, 238, 236),
-    new Pixel(76, 154, 236),
-    new Pixel(120, 124, 236),
-    new Pixel(176, 98, 236),
-    new Pixel(228, 84, 236),
-    new Pixel(236, 88, 180),
-    new Pixel(236, 106, 100),
-    new Pixel(212, 136, 32),
-    new Pixel(160, 170, 0),
-    new Pixel(116, 196, 0),
-    new Pixel(76, 208, 32),
-    new Pixel(56, 204, 108),
-    new Pixel(56, 180, 204),
-    new Pixel(60, 60, 60),
-    new Pixel(0, 0, 0),
-    new Pixel(0, 0, 0),
-
-    new Pixel(236, 238, 236),
-    new Pixel(168, 204, 236),
-    new Pixel(188, 188, 236),
-    new Pixel(212, 178, 236),
-    new Pixel(236, 174, 236),
-    new Pixel(236, 174, 212),
-    new Pixel(236, 180, 176),
-    new Pixel(228, 196, 144),
-    new Pixel(204, 210, 120),
-    new Pixel(180, 222, 120),
-    new Pixel(168, 226, 144),
-    new Pixel(152, 226, 180),
-    new Pixel(160, 214, 228),
-    new Pixel(160, 162, 160),
-    new Pixel(0, 0, 0),
-    new Pixel(0, 0, 0)
-];

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import type { Emulator, EmulatorSystem } from '../systems';
+import type { Emulator, EmulatorSystem, LoadResult } from '../systems';
 import { systemForFile } from '../systems';
 import AudioOutput from './audio/audioOutput';
 import ConsoleMenu from './ConsoleMenu';
@@ -13,16 +13,15 @@ const SAVE_CHECK_MS = 1000;
 const THEATER_KEY = 'theaterMode';
 const VOLUME_KEY = 'volume';
 
-interface Game {
+interface Game extends LoadResult {
     system: EmulatorSystem;
     emulator: Emulator;
     title: string;
     url: string | null;
-    warning?: string;
 }
 
 const audio = new AudioOutput();
-let bEmulationRun = false;
+let emulationRunning = false;
 
 // Has to be called from a user gesture
 function startAudio(emulator: Emulator | undefined): void {
@@ -82,7 +81,7 @@ const App = () => {
         return volume;
     });
     const [fullscreen, setFullscreen] = useState(false);
-    // Mirrors bEmulationRun, which the emulation loop reads, for the controls
+    // Mirrors emulationRunning, which the emulation loop reads, for the controls
     const [running, setRunningState] = useState(false);
     const screenRef = useRef<HTMLDivElement>(null);
     // Re-renders the debugger, which reads the emulator state directly
@@ -118,9 +117,9 @@ const App = () => {
             return;
         }
         const emulator = system.create();
-        let warning: string | undefined;
+        let result: LoadResult;
         try {
-            warning = emulator.load(data).warning;
+            result = emulator.load(data);
         } catch (e) {
             setRomError(`Could not load ${title}: ${e instanceof Error ? e.message : e}`);
             return;
@@ -133,7 +132,7 @@ const App = () => {
         }
         if (audio.sampleRate) emulator.setSampleRate(audio.sampleRate);
         audio.clear();
-        setGame({ system, emulator, title, url, warning });
+        setGame({ system, emulator, title, url, ...result });
         setRomError(null);
     }, []);
 
@@ -157,7 +156,7 @@ const App = () => {
     }, [loadGame]);
 
     const setRunning = useCallback((run: boolean) => {
-        bEmulationRun = run;
+        emulationRunning = run;
         setRunningState(run);
         if (run) {
             startAudio(gameRef.current?.emulator);
@@ -166,7 +165,7 @@ const App = () => {
         }
     }, []);
 
-    const toggleRun = useCallback(() => setRunning(!bEmulationRun), [setRunning]);
+    const toggleRun = useCallback(() => setRunning(!emulationRunning), [setRunning]);
 
     // Pauses, like stepping frame by frame in a video
     const stepFrame = useCallback(() => {
@@ -323,7 +322,7 @@ const App = () => {
         function tick(now: number) {
             requestId = requestAnimationFrame(tick);
             const emulator = gameRef.current?.emulator;
-            if (!bEmulationRun || !emulator) {
+            if (!emulationRunning || !emulator) {
                 startTime = null;
                 // Drops the sound of stepping while paused
                 emulator?.takeSamples();

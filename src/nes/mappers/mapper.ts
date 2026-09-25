@@ -1,25 +1,31 @@
 import type { Mirror } from '../constants';
 
-export interface MappedAddress {
-    mapped_addr: number;
-}
-
+// Maps the cartridge's address ranges to its ROM and RAM. Reads map to an offset, or null
+// when the address isn't the cartridge's.
 abstract class Mapper {
-    protected readonly _nPRGBanks: number;
-    protected readonly _nCHRBanks: number;
+    // In 16KB banks
+    protected readonly prgRomBanks: number;
+    // In 8KB banks, 0 on boards with 8KB of CHR RAM instead
+    protected readonly chrRomBanks: number;
 
-    constructor(prgBanks: number, chrBanks: number) {
-        this._nPRGBanks = prgBanks;
-        this._nCHRBanks = chrBanks;
+    constructor(prgRomBanks: number, chrRomBanks: number) {
+        this.prgRomBanks = prgRomBanks;
+        this.chrRomBanks = chrRomBanks;
     }
 
     // Maps a CPU read to an offset in PRG ROM
-    abstract cpuMapRead(addr: number, object: MappedAddress): boolean;
-    // PRG ROM can't be written, writes in its range go to the mapper's registers
+    abstract cpuMapRead(addr: number): number | null;
+    // PRG ROM can't be written, writes in its range go to the mapper's registers. Returns whether it was the cartridge's.
     abstract cpuMapWrite(addr: number, data: number): boolean;
-    abstract ppuMapRead(addr: number, object: MappedAddress): boolean;
-    abstract ppuMapWrite(addr: number, object: MappedAddress): boolean;
-    abstract reset(): void;
+    // Maps a PPU read to an offset in CHR ROM or RAM
+    abstract ppuMapRead(addr: number): number | null;
+
+    // Only CHR RAM can be written
+    ppuMapWrite(addr: number): number | null {
+        return addr <= 0x1FFF && this.chrRomBanks === 0 ? this.ppuMapRead(addr) : null;
+    }
+
+    reset(): void {}
 
     // Null when the mirroring is hardwired on the board, as set in the iNES header
     mirror(): Mirror | null {

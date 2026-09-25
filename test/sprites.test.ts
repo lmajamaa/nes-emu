@@ -1,7 +1,6 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import Bus from '../src/nes/bus';
 import Cartridge from '../src/nes/cartridge';
-import { palScreen } from '../src/nes/graphics';
 import type Ppu from '../src/nes/ppu';
 import { buildRom, clockUntil, muteConsole, runFrames } from './helpers';
 
@@ -64,7 +63,7 @@ function render(ppu: Ppu): void {
 }
 
 function colourAt(ppu: Ppu, x: number, y: number): number {
-    return palScreen.indexOf(ppu.getScreen().getPixel(x, y));
+    return ppu.screen.getPixel(x, y);
 }
 
 describe('sprites', () => {
@@ -145,7 +144,7 @@ describe('sprites', () => {
         runFrames(ppu, 1);
         clockUntil(ppu, () => ppu.scanline === 100);
 
-        expect(ppu.status.sprite_overflow).toBe(1);
+        expect(ppu.status.spriteOverflow).toBe(1);
         expect(colourAt(ppu, 7 * 16, 32)).toBe(SPRITE_COLOUR_1);
         expect(colourAt(ppu, 8 * 16, 32)).toBe(BACKDROP);
     });
@@ -158,7 +157,7 @@ describe('sprites', () => {
         runFrames(ppu, 1);
         clockUntil(ppu, () => ppu.scanline === 100);
 
-        expect(ppu.status.sprite_overflow).toBe(0);
+        expect(ppu.status.spriteOverflow).toBe(0);
     });
 
     test('the left 8 pixels are hidden when the mask says so', () => {
@@ -179,7 +178,7 @@ describe('sprite zero hit', () => {
         setup(ppu);
         runFrames(ppu, 1);
         clockUntil(ppu, () => ppu.scanline === 100);
-        return ppu.status.sprite_zero_hit;
+        return ppu.status.spriteZeroHit;
     }
 
     test('is set when sprite 0 overlaps the background', () => {
@@ -207,10 +206,10 @@ describe('sprite zero hit', () => {
         setSprite(ppu, 0, 16, 31, SOLID);
         runFrames(ppu, 1);
         clockUntil(ppu, () => ppu.scanline === 100);
-        expect(ppu.status.sprite_zero_hit).toBe(1);
+        expect(ppu.status.spriteZeroHit).toBe(1);
 
         clockUntil(ppu, () => ppu.scanline === -1 && ppu.cycle === 2);
-        expect(ppu.status.sprite_zero_hit).toBe(0);
+        expect(ppu.status.spriteZeroHit).toBe(0);
     });
 });
 
