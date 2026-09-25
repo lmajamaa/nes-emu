@@ -3,7 +3,9 @@ import type { Emulator, EmulatorSystem, LoadResult } from '../systems';
 import { systemForFile } from '../systems';
 import AudioOutput from './audio/audioOutput';
 import ConsoleMenu from './ConsoleMenu';
+import { DocsDialog, useDocsRoute } from './Docs';
 import Player from './Player';
+import ProjectInfo from './ProjectInfo';
 import { DEFAULT_ROM, type RomEntry } from './romLibrary';
 import { readSave, writeSave } from './saves';
 
@@ -23,16 +25,17 @@ interface Game extends LoadResult {
 const audio = new AudioOutput();
 let emulationRunning = false;
 
-// Has to be called from a user gesture
+// Browsers only let a page play sound once the user has interacted with it, so until then this waits
 function startAudio(emulator: Emulator | undefined): void {
+    if (!navigator.userActivation.hasBeenActive) return;
     audio.start()
         .then(() => emulator?.setSampleRate(audio.sampleRate!))
         .catch(e => console.warn('Audio is not available', e));
 }
 
-// Keys typed into controls like the menu shouldn't reach the emulator
+// Keys typed into controls like the menu, or while reading the docs, shouldn't reach the emulator
 function isFormControl(target: EventTarget | null): boolean {
-    return target instanceof HTMLElement && target.closest('input, button, select, textarea') !== null;
+    return target instanceof HTMLElement && target.closest('input, button, select, textarea, dialog') !== null;
 }
 
 // Stores a game's save RAM if it changed
@@ -111,10 +114,11 @@ const App = () => {
         context.putImageData(frame, 0, 0);
     }, []);
 
+    // Returns whether the game was loaded
     const loadGame = useCallback(async (system: EmulatorSystem, title: string, url: string | null, data: ArrayBuffer) => {
         if (!system.create) {
             setRomError(`${title}: ${system.shortName} emulation is not available yet.`);
-            return;
+            return false;
         }
         const emulator = system.create();
         let result: LoadResult;
@@ -122,7 +126,7 @@ const App = () => {
             result = emulator.load(data);
         } catch (e) {
             setRomError(`Could not load ${title}: ${e instanceof Error ? e.message : e}`);
-            return;
+            return false;
         }
         flushSave(gameRef.current?.emulator);
         // The save goes in before the game runs, which reads it as it starts
@@ -132,17 +136,22 @@ const App = () => {
         }
         if (audio.sampleRate) emulator.setSampleRate(audio.sampleRate);
         audio.clear();
-        setGame({ system, emulator, title, url, ...result });
+        const loaded = { system, emulator, title, url, ...result };
+        // Right away rather than on the next render, for starting it straight after
+        gameRef.current = loaded;
+        setGame(loaded);
         setRomError(null);
+        return true;
     }, []);
 
     const loadRom = useCallback(async (rom: RomEntry) => {
         try {
             const response = await fetch(rom.url);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            await loadGame(rom.system, rom.title, rom.url, await response.arrayBuffer());
+            return await loadGame(rom.system, rom.title, rom.url, await response.arrayBuffer());
         } catch (e) {
             setRomError(`Could not load ${rom.title}: ${e instanceof Error ? e.message : e}`);
+            return false;
         }
     }, [loadGame]);
 
@@ -150,9 +159,9 @@ const App = () => {
         const system = systemForFile(file.name);
         if (!system) {
             setRomError(`${file.name} is not a ROM of a supported console.`);
-            return;
+            return false;
         }
-        await loadGame(system, titleOf(file.name), null, await file.arrayBuffer());
+        return loadGame(system, titleOf(file.name), null, await file.arrayBuffer());
     }, [loadGame]);
 
     const setRunning = useCallback((run: boolean) => {
@@ -166,6 +175,23 @@ const App = () => {
     }, []);
 
     const toggleRun = useCallback(() => setRunning(!emulationRunning), [setRunning]);
+
+    // A game picked by the player starts right away. The pick is a click, so its sound can start too.
+    const playRom = useCallback(async (rom: RomEntry) => {
+        if (await loadRom(rom)) setRunning(true);
+    }, [loadRom, setRunning]);
+
+    const playFile = useCallback(async (file: File) => {
+        if (await openFile(file)) setRunning(true);
+    }, [openFile, setRunning]);
+
+    const [docsRoute, setDocsOpen] = useDocsRoute();
+    const docsOpen = docsRoute !== null;
+
+    // The game waits while the docs are read
+    useEffect(() => {
+        if (docsOpen) setRunning(false);
+    }, [docsOpen, setRunning]);
 
     // Pauses, like stepping frame by frame in a video
     const stepFrame = useCallback(() => {
@@ -227,9 +253,26 @@ const App = () => {
         startAudio(gameRef.current?.emulator);
     }, []);
 
+    // The page opens with a game playing, unless it opens on the docs
+    const docsOpenRef = useRef(docsOpen);
+    docsOpenRef.current = docsOpen;
     useEffect(() => {
-        loadRom(DEFAULT_ROM);
-    }, [loadRom]);
+        loadRom(DEFAULT_ROM).then(loaded => {
+            if (loaded && !docsOpenRef.current) setRunning(true);
+        });
+    }, [loadRom, setRunning]);
+
+    // Its sound starts with the first click or key press
+    useEffect(() => {
+        const startSound = () => {
+            if (emulationRunning && !audio.ready) startAudio(gameRef.current?.emulator);
+        };
+        const events = ['click', 'keydown', 'touchend'] as const;
+        for (const event of events) window.addEventListener(event, startSound, true);
+        return () => {
+            for (const event of events) window.removeEventListener(event, startSound, true);
+        };
+    }, []);
 
     // Games write their save RAM as they play, it's stored when it changed, and when leaving the page
     useEffect(() => {
@@ -299,6 +342,9 @@ const App = () => {
                 case 'KeyR':
                     resetGame();
                     break;
+                case 'KeyD':
+                    setDocsOpen(true);
+                    return;
                 default:
                     return;
             }
@@ -311,7 +357,7 @@ const App = () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleControllerKey);
         };
-    }, [drawScreen, toggleMute, toggleRun, stepFrame, resetGame, toggleTheater]);
+    }, [drawScreen, toggleMute, toggleRun, stepFrame, resetGame, toggleTheater, setDocsOpen]);
 
     useEffect(() => {
         let lastDebugUpdate = 0;
@@ -385,7 +431,7 @@ const App = () => {
     );
     const help = game && (
         <>
-            <code className="instructions">SPACE = Run/Pause    F = Step Frame    R = Reset    M = Mute    T = Theater mode</code>
+            <code className="instructions">SPACE = Run/Pause    F = Step Frame    R = Reset    M = Mute    T = Theater mode    D = Docs</code>
             <code className="instructions">Controller: {game.system.controlsHelp}</code>
             <code className="instructions">Click the screen to run or pause, double-click for full screen</code>
         </>
@@ -400,10 +446,12 @@ const App = () => {
                     system={game?.system ?? DEFAULT_ROM.system}
                     title={game?.title ?? null}
                     currentUrl={game?.url ?? null}
-                    onSelectRom={loadRom}
-                    onOpenFile={openFile}
+                    onSelectRom={playRom}
+                    onOpenFile={playFile}
                 />
+                <ProjectInfo onOpenDocs={() => setDocsOpen(true)} />
             </header>
+            {docsRoute && <DocsDialog route={docsRoute} onClose={() => setDocsOpen(false)} />}
             {romError && <p className="message error">{romError}</p>}
             {game?.warning && <p className="message">{game.warning}</p>}
             {game ?
@@ -414,6 +462,9 @@ const App = () => {
                     </div>
                 </>
                 : !romError && <p className="message">Loading…</p>}
+            <footer className="footer">
+                Nintendo, NES and SNES are trademarks of Nintendo. This project is not affiliated with, endorsed or sponsored by Nintendo.
+            </footer>
         </div>
     );
 };

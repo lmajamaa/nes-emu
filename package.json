@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lmajamaa/nes-emu"
+  },
   "type": "module",
   "scripts": {
-    "start": "vite",
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "start": "bun --bun vite",
+    "dev": "bun --bun vite",
+    "build": "bun --bun vite build",
+    "preview": "bun --bun vite preview",
     "test": "bun test",
     "fetch-cpu-tests": "bun scripts/fetch-cpu-tests.ts",
     "fetch-65816-tests": "bun scripts/fetch-65816-tests.ts",

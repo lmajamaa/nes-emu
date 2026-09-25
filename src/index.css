@@ -25,10 +25,12 @@ code {
   flex-direction: column;
 }
 
+/* Narrower on small screens, so the page doesn't get wider than a phone */
 #emulationCanvas {
-  border:1px solid goldenrod;
-  width: 640px;
-  height: 480px;
+  border: 1px solid goldenrod;
+  width: min(640px, calc(100vw - 50px));
+  height: auto;
+  aspect-ratio: 4 / 3;
 }
 
 .gameArea {
@@ -109,6 +111,12 @@ h4 {
 .codeArea code, .ramArea code, .cpuArea code {
   display: block;
   white-space: pre;
+}
+
+/* Scrolled sideways on small screens instead of widening the page */
+.codeArea, .ramArea, .cpuArea {
+  max-width: calc(100vw - 96px);
+  overflow-x: auto;
 }
 
 .consoleMenu {
@@ -434,4 +442,280 @@ h4 {
 .button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.footer {
+  margin-top: 32px;
+  padding-top: 12px;
+  font-size: 12px;
+  color: #C8A9BC;
+  border-top: 1px solid #5E1F48;
+}
+
+/* The version, docs and source links, in the header's right corner */
+.appVersion {
+  margin-left: auto;
+  font-size: 13px;
+  color: #C8A9BC;
+  font-variant-numeric: tabular-nums;
+}
+
+.headerIcon {
+  display: flex;
+  padding: 5px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.headerIcon:hover {
+  opacity: 1;
+  background-color: #3D0A2C;
+  border-color: goldenrod;
+}
+
+.headerIcon:focus-visible {
+  outline: 2px solid goldenrod;
+  outline-offset: 2px;
+}
+
+/* The docs, over the page */
+.docs {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, calc(100vw - 32px));
+  height: calc(100vh - 32px);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  color: inherit;
+  background-color: #2C001E;
+  border: 1px solid goldenrod;
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.docs::backdrop {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* The page stays put behind the docs */
+html:has(.docs[open]) {
+  overflow: hidden;
+}
+
+.docs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 10px 20px;
+  border-bottom: 1px solid #5E1F48;
+}
+
+.docs-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.docs-close {
+  display: flex;
+  padding: 6px;
+  color: inherit;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.docs-close:hover {
+  background-color: #52123D;
+}
+
+.docs-close:focus-visible,
+.docs-nav a:focus-visible {
+  outline: 2px solid goldenrod;
+  outline-offset: 2px;
+}
+
+.docs-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.docs-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+  width: 220px;
+  padding: 12px 8px;
+  overflow-y: auto;
+  border-right: 1px solid #5E1F48;
+}
+
+.docs-nav a {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.docs-nav a:hover {
+  background-color: #3D0A2C;
+}
+
+.docs-nav a[aria-current="page"] {
+  background-color: #52123D;
+  color: goldenrod;
+}
+
+.docs-navPath {
+  font-size: 12px;
+  color: #C8A9BC;
+}
+
+.docs-content {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 32px 32px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.docs-content > * {
+  max-width: 80ch;
+}
+
+.docs-content h1,
+.docs-content h2,
+.docs-content h3 {
+  line-height: 1.25;
+  scroll-margin-top: 16px;
+}
+
+.docs-content h1 {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #5E1F48;
+}
+
+.docs-content h2 {
+  margin-top: 32px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #5E1F48;
+}
+
+.docs-content a {
+  color: goldenrod;
+}
+
+.docs-content code {
+  padding: 1px 5px;
+  font-size: 0.9em;
+  background-color: #3D0A2C;
+  border-radius: 4px;
+}
+
+.docs-content pre {
+  padding: 12px 16px;
+  overflow-x: auto;
+  line-height: 1.4;
+  background-color: #1C0013;
+  border: 1px solid #5E1F48;
+  border-radius: 6px;
+}
+
+.docs-content pre code {
+  padding: 0;
+  background: none;
+}
+
+.docs-content table {
+  border-collapse: collapse;
+}
+
+.docs-content th,
+.docs-content td {
+  padding: 6px 12px;
+  text-align: left;
+  border: 1px solid #5E1F48;
+}
+
+.docs-content th {
+  background-color: #3D0A2C;
+}
+
+.docs-content blockquote {
+  margin-left: 0;
+  padding-left: 16px;
+  color: #C8A9BC;
+  border-left: 3px solid #5E1F48;
+}
+
+/* Task lists, like the plans' progress: drawn boxes in place of the greyed out disabled checkboxes */
+.docs-content ul:has(> .task-list-item) {
+  padding-left: 8px;
+}
+
+.docs-content .task-list-item {
+  list-style: none;
+  position: relative;
+  padding-left: 26px;
+}
+
+.docs-content .task-list-item-checkbox {
+  appearance: none;
+  position: absolute;
+  left: 0;
+  top: 0.3em;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid #C8A9BC;
+  border-radius: 4px;
+}
+
+.docs-content .task-list-item-checkbox:checked {
+  background: goldenrod url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%232C001E' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat;
+  border-color: goldenrod;
+}
+
+/* The panes still scroll, without the bars */
+.docs-nav,
+.docs-content {
+  scrollbar-width: none;
+}
+
+.docs-nav::-webkit-scrollbar,
+.docs-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* One column on narrow screens, with the documents above */
+@media (max-width: 700px) {
+  .docs-body {
+    flex-direction: column;
+  }
+
+  .docs-nav {
+    flex-direction: row;
+    width: auto;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid #5E1F48;
+  }
+
+  .docs-navPath {
+    display: none;
+  }
+
+  .docs-content {
+    padding: 8px 16px 24px;
+  }
 }

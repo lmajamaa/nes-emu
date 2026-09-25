@@ -3,3 +3,8 @@ declare module 'virtual:rom-library' {
     const romFiles: string[];
     export default romFiles;
 }
+
+declare module 'virtual:docs' {
+    const docs: import('../plugins/docs').Doc[];
+    export default docs;
+}

@@ -141,6 +141,41 @@ ROMs are checked in under `test/fixtures/` with their source, like blargg's APU 
 
 ## Progress
 
+Done before this plan, starting from javidx9's NES series in 2019 and restarted in 2026:
+
+- [x] CPU. The 6502 (2A03) with all 256 opcodes, including the unofficial ones, and the cycle
+  count of each instruction with page crossings and branches. Each instruction runs at once on
+  its first cycle (milestone 5 changes that). Passes nestest against its log, Tom Harte's 6502
+  SingleStepTests (apart from the chip-dependent `LXA`) and blargg's `instr_test` (all 16)
+- [x] Bus. 2 KB RAM and its mirrors, OAM DMA with the extra cycle to align to an even one, IRQs
+  from the APU and the cartridge taken between instructions, 8 KB of PRG RAM at `$6000–$7FFF`
+- [x] PPU. Backgrounds with scrolling through the loopy registers, 8x8 and 8x16 sprites with
+  flipping and priority, 8 sprites per line with the overflow flag, sprite zero hit, hiding the
+  left 8 pixels, 6-bit palette RAM with its mirrors, and nametable mirroring set by the header or
+  the mapper. The addresses it fetches reach the mapper, which MMC2 and MMC3 watch. It outputs
+  palette indices, turned into colours when the frame is drawn
+- [x] APU. Both pulse channels with sweep, triangle, noise, DMC with its sample reads and IRQ,
+  and the frame counter in 4 and 5 step modes with its IRQ, averaged down to the browser's
+  sample rate with a DC blocking filter. Passes blargg's `apu_test` (all 8). The DMC doesn't
+  stall the CPU yet (milestone 5)
+- [x] Controller. Player 1 on the keyboard, read through `$4016` with the strobe
+- [x] Cartridges. iNES ROMs with a trainer, CHR ROM or 8 KB of CHR RAM, and a warning for
+  unsupported mappers, which run as mapper 0
+- [x] Mappers:
+  - 0 NROM
+  - 1 MMC1, including the 512 KB SUROM boards
+  - 2 UxROM
+  - 3 CNROM
+  - 4 MMC3 (revision B) with the scanline IRQ clocked by PPU address line A12. Passes 4 of
+    blargg's 6 `mmc3_test` ROMs: `4-scanline_timing` needs milestone 5, and `6-MMC3_alt` tests
+    revision A
+  - 7 AxROM
+  - 9 MMC2, with the latches switched by fetching tiles `$FD` and `$FE` (Punch-Out!!)
+- [x] Debugger. Stepping an instruction or a frame, triggering an IRQ or NMI, the CPU registers,
+  disassembly around the program counter, RAM, the palettes and pattern tables
+
+This plan:
+
 - [x] 1. Core next to the SNES
 - [x] 2. Battery saves. PRG RAM is kept for cartridges with the battery bit, identified by a
   hash of the PRG and CHR ROM (not the header, so re-headered dumps share a save) and stored like

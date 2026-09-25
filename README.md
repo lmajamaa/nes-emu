@@ -1,8 +1,8 @@
-# Nintendo Emulator
+# nes-emu
 
 [![CI](https://github.com/lmajamaa/nes-emu/actions/workflows/ci.yml/badge.svg)](https://github.com/lmajamaa/nes-emu/actions/workflows/ci.yml)
 
-A Nintendo Entertainment System (NES) emulator that runs in the browser, written in TypeScript
+An emulator for the Nintendo Entertainment System (NES) that runs in the browser, written in TypeScript
 with a React debugger UI. It started in 2019 following javidx9's [NES emulator series](https://github.com/OneLoneCoder/olcNES) but was forgotten. Implementation was restarted in 2026, adding controllers, more cartridge mappers and a test suite built on well-known NES test ROMs.
 
 It can run official games like Super Mario Bros., Super Mario Bros. 2 and 3, Donkey Kong, Bubble Bobble, Mike Tyson's Punch-Out!! and DuckTales 1 and 2.
@@ -29,6 +29,8 @@ cartridge header says. Enhancement chips like the SuperFX aren't emulated yet.
   PRG RAM is kept in the browser (IndexedDB) between sessions, for games like The Legend of Zelda.
 - **Debugger**: step one instruction or frame at a time, and see the CPU registers,
   disassembly around the program counter, RAM, palettes and pattern tables.
+- **Docs**: the documents in `docs/` can be read in the app, from the docs icon in the top right
+  corner or with **D**. Each has its own address, like `#/docs/docs/nes-plan.md#milestones`, to link to.
 
 ### Not supported (yet)
 
@@ -47,9 +49,9 @@ bun install
 bun run dev
 ```
 
-Then open http://localhost:3000. The emulator starts with the `nestest` test ROM loaded and
-paused. Press **Space** to run it. Click the console logo to pick another game, or **Open ROM
-file…** to load a `.nes`, `.sfc` or `.smc` file from your computer. ROMs are read in the browser and not uploaded
+Then open http://localhost:3000. The emulator starts running the `nestest` test ROM, and
+**Space** pauses it. Click the console logo to pick another game, which starts playing right
+away, or **Open ROM file…** to load a `.nes`, `.sfc` or `.smc` file from your computer. ROMs are read in the browser and not uploaded
 anywhere. No games are included, but ROMs you put in `public/roms` (git ignored, apart from
 `nestest.nes`) are listed in the menu, grouped by console.
 
@@ -58,8 +60,8 @@ reset, sound with a volume slider that pops up above it on hover (remembered), t
 across the page, with the debugger below it, remembered) and full screen. Clicking the screen runs or pauses it, double-clicking goes full screen, and the
 controls hide while the game runs and the mouse is still.
 
-Sound starts when you first run the emulator, as browsers don't let pages play audio before the
-user interacts with them.
+Sound starts with your first click or key press, as browsers don't let pages play audio before
+the user interacts with them.
 
 ## Controls
 
@@ -81,6 +83,7 @@ user interacts with them.
 | R | Reset the console |
 | M | Mute / unmute |
 | T | Theater mode |
+| D | Documentation |
 | C | Step one instruction |
 | I / N | Trigger an IRQ / NMI (NES) |
 | P | Cycle the palette used by the pattern table view (NES) |
@@ -90,7 +93,7 @@ user interacts with them.
 | Command | |
 |---|---|
 | `bun run dev` | Development server at http://localhost:3000 |
-| `bun run build` | Production build into `build/` |
+| `bun run build` | Production build into `build/` (`BASE_PATH=/nes-emu/` to serve it from a subpath) |
 | `bun run preview` | Serve the production build |
 | `bun test` | Run the tests (`SLOW_TESTS=1 bun test` includes the slow ones, as CI does) |
 | `bun run typecheck` | Type check with TypeScript |
@@ -117,6 +120,10 @@ opcode, whose result depends on the chip and differs between the SingleStepTests
   tests of the cartridge, bus, timing, DMA, PPU, APU and DSP.
 
 CI runs the type check, the tests and the build on every push to `main` and on pull requests.
+Publishing a release deploys the app to GitHub Pages, under `/<repository>/`.
+
+The docs are rendered from markdown at build time with [Bun's markdown API](https://bun.com/docs/runtime/markdown),
+so Vite runs on Bun (`bun --bun vite`) rather than Node.
 
 ## Project structure
 
@@ -125,7 +132,9 @@ src/
   systems/      One adapter per console, implementing the Emulator interface in types.ts
     nes/        NES: the adapter, logo and debugger views, and core/ with the CPU, PPU, APU, bus, cartridge and mappers
     snes/       SNES, in progress: the adapter, and core/ with the 65816 CPU, bus, timing, DMA, PPU, APU and cartridge
-  shell/        Console independent UI: game menu, screen, keyboard, emulation loop, audio
+  shell/        Console independent UI: game menu, screen, keyboard, emulation loop, audio, docs
+plugins/        Vite plugins: the ROM list of public/roms, and the docs rendered to HTML
+docs/           Documents shown in the app
 test/fixtures/  Test ROMs and data (with their sources), imported as @test/fixtures/...
 scripts/        Test data tooling
 ```
@@ -145,3 +154,9 @@ Tests sit next to the code they test as `*.test.ts`, with shared test code in `t
 
 [MIT](LICENSE), for the emulator's own code. The test ROMs and test data in `test/fixtures` belong
 to their authors and keep their own terms, see [test/fixtures/README.md](test/fixtures/README.md).
+
+## Trademarks
+
+Nintendo, Nintendo Entertainment System, NES, Super Nintendo Entertainment System and SNES are
+trademarks of Nintendo. This project is not affiliated with, endorsed or sponsored by Nintendo.
+The names are only used to say which consoles it emulates, and no games are included.
