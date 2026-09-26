@@ -64,12 +64,16 @@ h4 {
   margin-top: 0;
 }
 
+/* Their own size in the debugger's flex columns, which would stretch them otherwise. Safari takes an
+   SVG's width attribute as its natural size only, stretched the SNES palette, and kept growing it. */
 .palette {
+  align-self: flex-start;
   margin-top: 12px;
   margin-left: 24px;
 }
 
 #patternCanvas {
+  align-self: flex-start;
   border: 1px solid goldenrod;
   margin-top: 12px;
   margin-left: 24px;
