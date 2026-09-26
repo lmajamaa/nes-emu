@@ -55,6 +55,17 @@ const snes: EmulatorSystem = {
         [PadButton.Left]: Button.Left,
         [PadButton.Right]: Button.Right,
     },
+    touchLayout: {
+        dpad: { up: Button.Up, down: Button.Down, left: Button.Left, right: Button.Right },
+        face: [
+            { label: 'X', button: Button.X, position: 'top' },
+            { label: 'Y', button: Button.Y, position: 'left' },
+            { label: 'A', button: Button.A, position: 'right' },
+            { label: 'B', button: Button.B, position: 'bottom' },
+        ],
+        shoulders: [{ label: 'L', button: Button.L }, { label: 'R', button: Button.R }],
+        menu: [{ label: 'Select', button: Button.Select }, { label: 'Start', button: Button.Start }],
+    },
     controlsHelp: 'Arrows = D-pad    X = A    Z = B    S = X    A = Y    Q = L    W = R    Right Shift = Select    Enter = Start',
     create: () => new SnesEmulator(),
 };

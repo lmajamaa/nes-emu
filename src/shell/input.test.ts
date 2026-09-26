@@ -98,6 +98,17 @@ describe('player input', () => {
         expect(emulator.calls).toEqual([[1, SnesButton.R, true], [1, SnesButton.B, true]]);
     });
 
+    test('the touch controls are player 1’s, alongside the keyboard', () => {
+        const input = new PlayerInput();
+        const emulator = recorder();
+        input.setKey(0, 0x01, true);
+        input.setTouch(0x01 | 0x80);
+        input.apply(emulator);
+        input.setTouch(0);
+        input.apply(emulator);
+        expect(emulator.calls).toEqual([[0, 0x01, true], [0, 0x80, true], [0, 0x80, false]]);
+    });
+
     test('keys are let go of when the window loses focus', () => {
         const input = new PlayerInput();
         const emulator = recorder();

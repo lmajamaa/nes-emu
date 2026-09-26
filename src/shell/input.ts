@@ -37,12 +37,18 @@ export function padName(pad: PadState): string {
     return pad.id.replace(/\s*\(.*\)\s*$/, '') || 'Gamepad';
 }
 
-// Each player's buttons are those held on the keyboard and on their pad together. Only changes
-// reach the emulator, so letting go of a key doesn't let go of the same button held on a pad.
+// Each player's buttons are those held on the keyboard, the touch controls and their pad together.
+// Only changes reach the emulator, so letting go of a key doesn't let go of the same button held on a pad.
 export class PlayerInput {
     private readonly keyboard = new Array<number>(PLAYERS).fill(0);
     private readonly pads = new Array<number>(PLAYERS).fill(0);
+    // The touch controls are player 1's
+    private touch = 0;
     private readonly sent = new Array<number>(PLAYERS).fill(0);
+
+    setTouch(buttons: number): void {
+        this.touch = buttons;
+    }
 
     setKey(player: number, button: number, pressed: boolean): void {
         this.keyboard[player] = pressed ? this.keyboard[player]! | button : this.keyboard[player]! & ~button;
@@ -65,7 +71,7 @@ export class PlayerInput {
 
     apply(emulator: Pick<Emulator, 'setButton'>): void {
         for (let player = 0; player < PLAYERS; player++) {
-            const buttons = this.keyboard[player]! | this.pads[player]!;
+            const buttons = this.keyboard[player]! | this.pads[player]! | (player === 0 ? this.touch : 0);
             const changed = buttons ^ this.sent[player]!;
             for (let bit = 1; bit <= changed; bit <<= 1) {
                 if (changed & bit) emulator.setButton(player, bit, (buttons & bit) !== 0);

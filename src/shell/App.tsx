@@ -4,8 +4,10 @@ import { systemForFile } from '../systems';
 import AudioOutput from './audio/audioOutput';
 import ConsoleMenu from './ConsoleMenu';
 import { DocsDialog, useDocsRoute } from './Docs';
+import { FrameStats } from './frameStats';
 import { padButtons, padName, PlayerInput, playerPads, type PadState } from './input';
 import Player from './Player';
+import TouchControls, { useTouchScreen } from './TouchControls';
 import ProjectInfo from './ProjectInfo';
 import { DEFAULT_ROM, type RomEntry } from './romLibrary';
 import { readSave, writeSave } from './saves';
@@ -15,6 +17,7 @@ const MAX_FRAMES_PER_TICK = 4;
 const SAVE_CHECK_MS = 1000;
 const THEATER_KEY = 'theaterMode';
 const VOLUME_KEY = 'volume';
+const DEBUGGER_KEY = 'debugger';
 
 interface Game extends LoadResult {
     system: EmulatorSystem;
@@ -25,6 +28,7 @@ interface Game extends LoadResult {
 
 const audio = new AudioOutput();
 const input = new PlayerInput();
+const frameStats = new FrameStats();
 let emulationRunning = false;
 
 // Gamepads only show up once one of their buttons is pressed
@@ -93,9 +97,16 @@ const App = () => {
     const [fullscreen, setFullscreen] = useState(false);
     // The connected gamepads' names, in player order
     const [padNames, setPadNames] = useState<string[]>([]);
+    const touch = useTouchScreen();
+    // Remembered, and hidden at first on touch screens, where there's little room for it
+    const [debuggerShown, setDebuggerShown] = useState(() => {
+        const setting = readSetting(DEBUGGER_KEY);
+        return setting === null ? !matchMedia('(pointer: coarse)').matches : setting === 'true';
+    });
     // Mirrors emulationRunning, which the emulation loop reads, for the controls
     const [running, setRunningState] = useState(false);
     const screenRef = useRef<HTMLDivElement>(null);
+    const touchPlayRef = useRef<HTMLDivElement>(null);
     // Re-renders the debugger, which reads the emulator state directly
     const [, refreshDebugger] = useReducer((n: number) => n + 1, 0);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -227,12 +238,33 @@ const App = () => {
         });
     }, []);
 
+    const toggleDebugger = useCallback(() => {
+        setDebuggerShown(shown => {
+            storeSetting(DEBUGGER_KEY, String(!shown));
+            return !shown;
+        });
+    }, []);
+
+    const setTouchButtons = useCallback((buttons: number) => {
+        input.setTouch(buttons);
+        const emulator = gameRef.current?.emulator;
+        if (emulator) input.apply(emulator);
+    }, []);
+
+    // On touch screens the controls go full screen with the screen, turned to landscape where the
+    // browser allows it, which Chrome on Android does in full screen
     const toggleFullscreen = useCallback(() => {
         if (document.fullscreenElement) {
             document.exitFullscreen();
-        } else {
-            screenRef.current?.requestFullscreen().catch(e => console.warn('Full screen is not available', e));
+            return;
         }
+        const touchPlay = touchPlayRef.current;
+        (touchPlay ?? screenRef.current)?.requestFullscreen()
+            .then(() => {
+                const orientation = window.screen.orientation as ScreenOrientation & { lock?: (to: 'landscape') => Promise<void> };
+                if (touchPlay) return orientation.lock?.('landscape');
+            })
+            .catch(e => console.warn('Full screen is not available', e));
     }, []);
 
     // Escape leaves full screen without going through the button
@@ -406,6 +438,7 @@ const App = () => {
             const emulator = current?.emulator;
             if (!emulationRunning || !emulator) {
                 startTime = null;
+                frameStats.clear();
                 // Drops the sound of stepping while paused
                 emulator?.takeSamples();
                 return;
@@ -424,10 +457,12 @@ const App = () => {
                 framesDue = 1;
             }
             for (let i = 0; i < framesDue; i++) {
+                const start = performance.now();
                 emulator.runFrame();
                 framesDone++;
                 const samples = emulator.takeSamples();
                 if (audio.ready) audio.push(samples);
+                frameStats.record(now, performance.now() - start);
             }
             if (framesDue === 0) return;
 
@@ -443,9 +478,11 @@ const App = () => {
         return () => cancelAnimationFrame(requestId);
     }, [drawScreen]);
 
-    const Debugger = game?.emulator.Debugger;
+    const Debugger = debuggerShown ? game?.emulator.Debugger : undefined;
+    // Touch screens place the screen between the touch controls instead
+    const theaterLayout = theater && !touch;
     const screen = game && (
-        <div className={theater ? 'screen theater' : 'screen'} ref={screenRef}>
+        <div className={theaterLayout ? 'screen theater' : 'screen'} ref={screenRef}>
             <Player
                 canvasRef={canvasRef}
                 width={game.emulator.width}
@@ -455,6 +492,8 @@ const App = () => {
                 volume={volume}
                 theater={theater}
                 fullscreen={fullscreen}
+                touch={touch}
+                debuggerShown={debuggerShown}
                 onToggleRun={toggleRun}
                 onStepFrame={stepFrame}
                 onReset={resetGame}
@@ -462,26 +501,40 @@ const App = () => {
                 onVolumeChange={changeVolume}
                 onToggleTheater={toggleTheater}
                 onToggleFullscreen={toggleFullscreen}
+                onToggleDebugger={toggleDebugger}
             />
         </div>
     );
+    const playArea = game && touch
+        ? <TouchControls ref={touchPlayRef} layout={game.system.touchLayout} onChange={setTouchButtons}>{screen}</TouchControls>
+        : screen;
+    const frameMs = game ? 1000 / game.emulator.frameRate : 0;
     const help = game && (
         <>
-            <code className="instructions">SPACE = Run/Pause    F = Step Frame    R = Reset    M = Mute    T = Theater mode</code>
-            <code className="instructions">Controller: {game.system.controlsHelp}</code>
-            <code className="instructions">
-                Gamepads: {padNames.length
-                    ? padNames.map((name, player) => `${name} = player ${player + 1}`).join('    ')
-                    : 'press a button on a gamepad to use it'}
-            </code>
-            <code className="instructions">Click the screen to run or pause, double-click for full screen</code>
+            {!touch && <>
+                <code className="instructions">SPACE = Run/Pause    F = Step Frame    R = Reset    M = Mute    T = Theater mode</code>
+                <code className="instructions">Controller: {game.system.controlsHelp}</code>
+            </>}
+            {(!touch || padNames.length > 0) &&
+                <code className="instructions">
+                    Gamepads: {padNames.length
+                        ? padNames.map((name, player) => `${name} = player ${player + 1}`).join('    ')
+                        : 'press a button on a gamepad to use it'}
+                </code>}
+            {!touch && <code className="instructions">Click the screen to run or pause, double-click for full screen</code>}
+            {/* To see how fast a device is: the time emulating a frame takes, of the time a frame has */}
+            {debuggerShown && running && frameStats.framesPerSecond > 0 &&
+                <code className="instructions">
+                    {`Frame ${frameStats.averageMs.toFixed(1)} ms of ${frameMs.toFixed(1)} ms (${Math.round(frameStats.averageMs / frameMs * 100)}%), ` +
+                        `slowest ${frameStats.slowestMs.toFixed(1)} ms, ${frameStats.framesPerSecond} fps`}
+                </code>}
         </>
     );
     // In theater mode the screen goes across the page, above the debugger
-    const column = theater ? help : <>{screen}{help}</>;
+    const column = theaterLayout ? help : <>{playArea}{help}</>;
 
     return (
-        <div className="gameArea">
+        <div className={touch ? 'gameArea touch' : 'gameArea'}>
             <header className="header">
                 <ConsoleMenu
                     system={game?.system ?? DEFAULT_ROM.system}
@@ -497,14 +550,14 @@ const App = () => {
             {game?.warning && <p className="message">{game.warning}</p>}
             {game ?
                 <>
-                    {theater && screen}
+                    {theaterLayout && screen}
                     <div className="container">
                         {Debugger ? <Debugger>{column}</Debugger> : <div className="column">{column}</div>}
                     </div>
                 </>
                 : !romError && <p className="message">Loading…</p>}
             <footer className="footer">
-                Nintendo, NES and SNES are trademarks of Nintendo. This project is not affiliated with, endorsed or sponsored by Nintendo.
+                An unofficial project, not affiliated with Nintendo. NES and SNES are trademarks of Nintendo.
             </footer>
         </div>
     );

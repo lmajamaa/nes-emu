@@ -135,6 +135,15 @@ const nes: EmulatorSystem = {
         [PadButton.Left]: Button.Left,
         [PadButton.Right]: Button.Right,
     },
+    touchLayout: {
+        dpad: { up: Button.Up, down: Button.Down, left: Button.Left, right: Button.Right },
+        face: [
+            { label: 'B', button: Button.B, position: 'left' },
+            { label: 'A', button: Button.A, position: 'right' },
+        ],
+        shoulders: [],
+        menu: [{ label: 'Select', button: Button.Select }, { label: 'Start', button: Button.Start }],
+    },
     controlsHelp: 'Arrows = D-pad    X = A    Z = B    A = Select    S = Start',
     create: () => new NesEmulator(),
 };

@@ -13,6 +13,9 @@ interface PlayerProps {
     volume: number;
     theater: boolean;
     fullscreen: boolean;
+    // On touch screens a tap on the screen doesn't pause, and the controls stay shown
+    touch: boolean;
+    debuggerShown: boolean;
     onToggleRun: () => void;
     onStepFrame: () => void;
     onReset: () => void;
@@ -20,6 +23,7 @@ interface PlayerProps {
     onVolumeChange: (volume: number) => void;
     onToggleTheater: () => void;
     onToggleFullscreen: () => void;
+    onToggleDebugger: () => void;
 }
 
 const Icon = ({ children }: { children: ReactNode }) => (
@@ -38,11 +42,12 @@ const ICONS = {
     theaterOff: <Icon><path d="M6 8h12v8H6zm2 2v4h8v-4z" /></Icon>,
     fullscreen: <Icon><path d="M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z" /></Icon>,
     fullscreenOff: <Icon><path d="M8 4h2v6H4V8h4zM14 4h2v4h4v2h-6zM4 14h6v6H8v-4H4zM14 14h6v2h-4v4h-2z" /></Icon>,
+    debugger: <Icon><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6z" /></Icon>,
 };
 
 // The game's screen, with controls over its bottom edge like a video player's
 const Player = (props: PlayerProps) => {
-    const { canvasRef, width, height, running, muted, volume, theater, fullscreen } = props;
+    const { canvasRef, width, height, running, muted, volume, theater, fullscreen, touch, debuggerShown } = props;
     const [active, setActive] = useState(true);
     const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -76,18 +81,18 @@ const Player = (props: PlayerProps) => {
         </button>
     );
 
-    const idle = running && !active;
+    const idle = running && !active && !touch;
     const silent = muted || volume === 0;
     return (
         <div
             className={idle ? 'player idle' : 'player'}
-            onMouseMove={wake}
-            onMouseLeave={() => setActive(false)}
-            onClick={props.onToggleRun}
-            onDoubleClick={props.onToggleFullscreen}
+            onMouseMove={touch ? undefined : wake}
+            onMouseLeave={touch ? undefined : () => setActive(false)}
+            onClick={touch ? undefined : props.onToggleRun}
+            onDoubleClick={touch ? undefined : props.onToggleFullscreen}
         >
             <canvas id="emulationCanvas" ref={canvasRef} width={width} height={height} />
-            <div className={running ? 'controls' : 'controls paused'}>
+            <div className={running && !touch ? 'controls' : 'controls paused'}>
                 {button(running ? 'Pause (Space)' : 'Run (Space)', running ? ICONS.pause : ICONS.play, props.onToggleRun)}
                 {button('Step one frame (F)', ICONS.step, props.onStepFrame)}
                 {button('Reset (R)', ICONS.reset, props.onReset)}
@@ -116,7 +121,8 @@ const Player = (props: PlayerProps) => {
                     </div>
                 </div>
                 <span className="controlsSpacer" />
-                {button(theater ? 'Default view (T)' : 'Theater mode (T)', theater ? ICONS.theaterOff : ICONS.theater, props.onToggleTheater)}
+                {button(debuggerShown ? 'Hide the debugger' : 'Show the debugger', ICONS.debugger, props.onToggleDebugger)}
+                {!touch && button(theater ? 'Default view (T)' : 'Theater mode (T)', theater ? ICONS.theaterOff : ICONS.theater, props.onToggleTheater)}
                 {document.fullscreenEnabled &&
                     button(fullscreen ? 'Exit full screen' : 'Full screen', fullscreen ? ICONS.fullscreenOff : ICONS.fullscreen, props.onToggleFullscreen)}
             </div>

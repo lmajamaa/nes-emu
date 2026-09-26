@@ -131,9 +131,10 @@ h4 {
   color: inherit;
   text-align: left;
   background: none;
-  border: 1px solid transparent;
+  /* Always shown, so it reads as a dropdown */
+  border: 1px solid #666666;
   border-radius: 8px;
-  padding: 6px 10px 6px 6px;
+  padding: 6px 12px 6px 8px;
   cursor: pointer;
 }
 
@@ -186,6 +187,7 @@ h4 {
   width: 14px;
   height: 14px;
   flex: none;
+  margin-left: 8px;
   transition: transform 0.15s;
 }
 
@@ -717,5 +719,177 @@ html:has(.docs[open]) {
 
   .docs-content {
     padding: 8px 16px 24px;
+  }
+}
+
+/* Touch screens: the screen with a D-pad and buttons, below it in portrait and beside it in landscape */
+.gameArea.touch {
+  margin: 12px;
+}
+
+.touchPlay {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas: "screen screen" "left right";
+  gap: 16px 8px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.touchScreen {
+  grid-area: screen;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.touchCluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.touchCluster.left {
+  grid-area: left;
+}
+
+.touchCluster.right {
+  grid-area: right;
+}
+
+.touchShoulder:empty {
+  display: none;
+}
+
+.touchButton,
+.touchDpad-arm,
+.touchDpad-middle {
+  background-color: #3D0A2C;
+  border: 2px solid #5E1F48;
+}
+
+.touchButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-weight: 700;
+  color: #EEEEEE;
+  border-radius: 50%;
+}
+
+.touchButton.pressed,
+.touchDpad-arm.pressed {
+  color: #2C001E;
+  background-color: goldenrod;
+  border-color: goldenrod;
+}
+
+.touchButton.shoulder {
+  width: 96px;
+  height: 36px;
+  border-radius: 18px;
+}
+
+.touchButton.menu {
+  width: 80px;
+  height: 30px;
+  font-size: 13px;
+  border-radius: 15px;
+}
+
+.touchDpad {
+  position: relative;
+  width: 150px;
+  height: 150px;
+}
+
+.touchDpad-arm,
+.touchDpad-middle {
+  position: absolute;
+  box-sizing: border-box;
+  width: 50px;
+  height: 50px;
+}
+
+.touchDpad-arm.up { left: 50px; top: 0; border-radius: 8px 8px 0 0; }
+.touchDpad-arm.left { left: 0; top: 50px; border-radius: 8px 0 0 8px; }
+.touchDpad-arm.right { left: 100px; top: 50px; border-radius: 0 8px 8px 0; }
+.touchDpad-arm.down { left: 50px; top: 100px; border-radius: 0 0 8px 8px; }
+.touchDpad-middle { left: 50px; top: 50px; border-color: #3D0A2C; }
+
+.touchFace {
+  position: relative;
+  width: 170px;
+  height: 150px;
+}
+
+.touchButton.face {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  font-size: 20px;
+}
+
+.touchFace .face.top { left: 55px; top: 0; }
+.touchFace .face.left { left: 0; top: 45px; }
+.touchFace .face.right { left: 110px; top: 45px; }
+.touchFace .face.bottom { left: 55px; top: 90px; }
+
+/* The NES's B and A, side by side and bigger */
+.touchFace.buttons2 .face {
+  width: 72px;
+  height: 72px;
+  font-size: 24px;
+}
+
+.touchFace.buttons2 .face.left { left: 4px; top: 39px; }
+.touchFace.buttons2 .face.right { left: 94px; top: 39px; }
+
+@media (orientation: landscape) {
+  .touchPlay {
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-areas: "left screen right";
+    align-items: center;
+  }
+
+  /* As tall as fits, leaving the sides 170px each for the D-pad and the buttons */
+  .gameArea.touch #emulationCanvas {
+    width: auto;
+    height: min(480px, calc(100dvh - 120px), calc((100vw - 380px) * 3 / 4));
+  }
+}
+
+/* Phones on their side: the game gets the whole height, the menu is back in portrait */
+@media (orientation: landscape) and (max-height: 500px) {
+  .gameArea.touch {
+    margin: 8px;
+  }
+
+  .gameArea.touch .header,
+  .gameArea.touch .footer {
+    display: none;
+  }
+
+  .gameArea.touch #emulationCanvas {
+    height: min(calc(100dvh - 18px), calc((100vw - 380px) * 3 / 4));
+  }
+}
+
+/* Full screen on touch screens: the controls come along, around the screen */
+.touchPlay:fullscreen {
+  box-sizing: border-box;
+  align-content: center;
+  padding: 8px;
+  background-color: #2C001E;
+}
+
+@media (orientation: landscape) {
+  .touchPlay:fullscreen #emulationCanvas {
+    height: min(calc(100dvh - 16px), calc((100vw - 380px) * 3 / 4));
   }
 }

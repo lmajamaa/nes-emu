@@ -56,6 +56,23 @@ export const PadButton = {
     Right: 15,
 } as const;
 
+export interface TouchButton {
+    readonly label: string;
+    // A controller button of the system
+    readonly button: number;
+}
+
+// The on-screen controls of touch screens
+export interface TouchLayout {
+    readonly dpad: { readonly up: number; readonly down: number; readonly left: number; readonly right: number };
+    // Under the right thumb, where they are on the console's pad
+    readonly face: readonly (TouchButton & { readonly position: 'top' | 'left' | 'right' | 'bottom' })[];
+    // Left and right, above the thumbs
+    readonly shoulders: readonly TouchButton[];
+    // Select on the left, Start on the right
+    readonly menu: readonly [TouchButton, TouchButton];
+}
+
 export interface EmulatorSystem {
     readonly id: string;
     readonly name: string;
@@ -67,6 +84,7 @@ export interface EmulatorSystem {
     readonly keyMap: Readonly<Record<string, number>>;
     // PadButton to a controller button of this system. The left stick moves the D-pad's buttons.
     readonly padMap: Readonly<Record<number, number>>;
+    readonly touchLayout: TouchLayout;
     readonly controlsHelp: string;
     // Missing while the system is not emulated yet
     readonly create?: () => Emulator;
