@@ -3,7 +3,7 @@ import { hashOf } from '../../utils';
 import Bus from './core/bus';
 import Cartridge, { SUPPORTED_MAPPERS } from './core/cartridge';
 import { Button } from './core/controller';
-import type { Emulator, EmulatorSystem, LoadResult } from '../types';
+import { PadButton, type Emulator, type EmulatorSystem, type LoadResult } from '../types';
 import NesLogo from './ui/NesLogo';
 import NesDebugger from './ui/NesDebugger';
 
@@ -123,6 +123,17 @@ const nes: EmulatorSystem = {
         ArrowDown: Button.Down,
         ArrowLeft: Button.Left,
         ArrowRight: Button.Right,
+    },
+    // B and A where they are on a SNES pad, which most pads follow
+    padMap: {
+        [PadButton.FaceBottom]: Button.B,
+        [PadButton.FaceRight]: Button.A,
+        [PadButton.Select]: Button.Select,
+        [PadButton.Start]: Button.Start,
+        [PadButton.Up]: Button.Up,
+        [PadButton.Down]: Button.Down,
+        [PadButton.Left]: Button.Left,
+        [PadButton.Right]: Button.Right,
     },
     controlsHelp: 'Arrows = D-pad    X = A    Z = B    A = Select    S = Start',
     create: () => new NesEmulator(),

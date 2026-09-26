@@ -79,11 +79,9 @@ ROMs are checked in under `test/fixtures/` with their source, like blargg's APU 
 
 ### 3. Second controller (small)
 
-- The bus already has two controller ports, but only player 1 is mapped. `keyMap` needs a
-  player per key, so it becomes `Record<string, { player: number; button: number }>` for both
-  systems.
-- Gamepads through the Gamepad API, polled once per frame in the emulation loop, the first
-  pad as player 1 and the second as player 2.
+- The bus already has two controller ports, but only player 1 is mapped. Gamepads, and with
+  them player 2, are in the [controllers plan](controllers.md) for both consoles, with a second
+  keyboard player coming with its rebinding.
 - Tests: `$4017` reads player 2's buttons in `core/controller.test.ts`, plus unit tests of the key
   mapping.
 

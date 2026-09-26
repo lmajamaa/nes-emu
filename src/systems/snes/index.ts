@@ -1,4 +1,4 @@
-import type { EmulatorSystem } from '../types';
+import { PadButton, type EmulatorSystem } from '../types';
 import { SnesEmulator } from './emulator';
 import SnesLogo from './ui/SnesLogo';
 
@@ -37,6 +37,23 @@ const snes: EmulatorSystem = {
         ArrowDown: Button.Down,
         ArrowLeft: Button.Left,
         ArrowRight: Button.Right,
+    },
+    // The standard mapping numbers buttons by position, which is the SNES pad's layout
+    padMap: {
+        [PadButton.FaceBottom]: Button.B,
+        [PadButton.FaceRight]: Button.A,
+        [PadButton.FaceLeft]: Button.Y,
+        [PadButton.FaceTop]: Button.X,
+        [PadButton.LeftShoulder]: Button.L,
+        [PadButton.RightShoulder]: Button.R,
+        [PadButton.LeftTrigger]: Button.L,
+        [PadButton.RightTrigger]: Button.R,
+        [PadButton.Select]: Button.Select,
+        [PadButton.Start]: Button.Start,
+        [PadButton.Up]: Button.Up,
+        [PadButton.Down]: Button.Down,
+        [PadButton.Left]: Button.Left,
+        [PadButton.Right]: Button.Right,
     },
     controlsHelp: 'Arrows = D-pad    X = A    Z = B    S = X    A = Y    Q = L    W = R    Right Shift = Select    Enter = Start',
     create: () => new SnesEmulator(),

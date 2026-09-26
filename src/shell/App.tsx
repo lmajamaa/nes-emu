@@ -4,6 +4,7 @@ import { systemForFile } from '../systems';
 import AudioOutput from './audio/audioOutput';
 import ConsoleMenu from './ConsoleMenu';
 import { DocsDialog, useDocsRoute } from './Docs';
+import { padButtons, padName, PlayerInput, playerPads, type PadState } from './input';
 import Player from './Player';
 import ProjectInfo from './ProjectInfo';
 import { DEFAULT_ROM, type RomEntry } from './romLibrary';
@@ -23,7 +24,13 @@ interface Game extends LoadResult {
 }
 
 const audio = new AudioOutput();
+const input = new PlayerInput();
 let emulationRunning = false;
+
+// Gamepads only show up once one of their buttons is pressed
+function readPads(): readonly (PadState | null)[] {
+    return navigator.getGamepads?.() ?? [];
+}
 
 // Browsers only let a page play sound once the user has interacted with it, so until then this waits
 function startAudio(emulator: Emulator | undefined): void {
@@ -84,6 +91,8 @@ const App = () => {
         return volume;
     });
     const [fullscreen, setFullscreen] = useState(false);
+    // The connected gamepads' names, in player order
+    const [padNames, setPadNames] = useState<string[]>([]);
     // Mirrors emulationRunning, which the emulation loop reads, for the controls
     const [running, setRunningState] = useState(false);
     const screenRef = useRef<HTMLDivElement>(null);
@@ -139,6 +148,9 @@ const App = () => {
         const loaded = { system, emulator, title, url, ...result };
         // Right away rather than on the next render, for starting it straight after
         gameRef.current = loaded;
+        // Buttons already held carry over to the new game
+        input.forget();
+        input.apply(emulator);
         setGame(loaded);
         setRomError(null);
         return true;
@@ -230,6 +242,17 @@ const App = () => {
         return () => document.removeEventListener('fullscreenchange', update);
     }, []);
 
+    useEffect(() => {
+        const update = () => setPadNames(playerPads(readPads()).map(padName));
+        update();
+        window.addEventListener('gamepadconnected', update);
+        window.addEventListener('gamepaddisconnected', update);
+        return () => {
+            window.removeEventListener('gamepadconnected', update);
+            window.removeEventListener('gamepaddisconnected', update);
+        };
+    }, []);
+
     // The screen moves to a new canvas when the layout changes, which starts out blank
     useEffect(() => {
         drawScreen();
@@ -304,13 +327,21 @@ const App = () => {
 
             if (event.type === 'keydown') {
                 if (isFormControl(event.target)) return false;
-                current.emulator.setButton(0, button, true);
+                input.setKey(0, button, true);
             } else {
                 // Always release, the key may have been pressed before focus moved
-                current.emulator.setButton(0, button, false);
+                input.setKey(0, button, false);
             }
+            input.apply(current.emulator);
             event.preventDefault();
             return true;
+        }
+
+        // Keys let go of in another window would otherwise stay held
+        function releaseKeys() {
+            input.releaseKeys();
+            const emulator = gameRef.current?.emulator;
+            if (emulator) input.apply(emulator);
         }
 
         function handleKeyDown(event: KeyboardEvent) {
@@ -350,9 +381,11 @@ const App = () => {
 
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleControllerKey);
+        window.addEventListener('blur', releaseKeys);
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleControllerKey);
+            window.removeEventListener('blur', releaseKeys);
         };
     }, [drawScreen, toggleMute, toggleRun, stepFrame, resetGame, toggleTheater]);
 
@@ -364,7 +397,13 @@ const App = () => {
 
         function tick(now: number) {
             requestId = requestAnimationFrame(tick);
-            const emulator = gameRef.current?.emulator;
+            const current = gameRef.current;
+            // The pads are read with the frames they are used for, the Gamepad API has no events for buttons
+            if (current) {
+                input.setPads(playerPads(readPads()).map(pad => padButtons(pad, current.system.padMap)));
+                input.apply(current.emulator);
+            }
+            const emulator = current?.emulator;
             if (!emulationRunning || !emulator) {
                 startTime = null;
                 // Drops the sound of stepping while paused
@@ -430,6 +469,11 @@ const App = () => {
         <>
             <code className="instructions">SPACE = Run/Pause    F = Step Frame    R = Reset    M = Mute    T = Theater mode</code>
             <code className="instructions">Controller: {game.system.controlsHelp}</code>
+            <code className="instructions">
+                Gamepads: {padNames.length
+                    ? padNames.map((name, player) => `${name} = player ${player + 1}`).join('    ')
+                    : 'press a button on a gamepad to use it'}
+            </code>
             <code className="instructions">Click the screen to run or pause, double-click for full screen</code>
         </>
     );

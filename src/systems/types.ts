@@ -37,6 +37,25 @@ export interface Emulator {
     readonly Debugger?: ComponentType<{ children: ReactNode }>;
 }
 
+// The buttons of the Gamepad API's standard mapping, numbered by where they are on the pad,
+// see https://w3c.github.io/gamepad/#remapping
+export const PadButton = {
+    FaceBottom: 0,
+    FaceRight: 1,
+    FaceLeft: 2,
+    FaceTop: 3,
+    LeftShoulder: 4,
+    RightShoulder: 5,
+    LeftTrigger: 6,
+    RightTrigger: 7,
+    Select: 8,
+    Start: 9,
+    Up: 12,
+    Down: 13,
+    Left: 14,
+    Right: 15,
+} as const;
+
 export interface EmulatorSystem {
     readonly id: string;
     readonly name: string;
@@ -46,6 +65,8 @@ export interface EmulatorSystem {
     readonly Logo: ComponentType<SVGProps<SVGSVGElement>>;
     // KeyboardEvent.code to a controller button of this system
     readonly keyMap: Readonly<Record<string, number>>;
+    // PadButton to a controller button of this system. The left stick moves the D-pad's buttons.
+    readonly padMap: Readonly<Record<number, number>>;
     readonly controlsHelp: string;
     // Missing while the system is not emulated yet
     readonly create?: () => Emulator;

@@ -33,7 +33,7 @@ Then open http://localhost:3000. The emulator starts running the `nestest` test 
 **Space** pauses it. Click the console logo to pick another game, which starts playing right
 away, or **Open ROM file…** to load a `.nes`, `.sfc` or `.smc` file from your computer. ROMs are read in the browser and not uploaded
 anywhere. Only publicly available user-made ROMs are included: the `nestest` CPU test for the
-NES, and for the SNES the homebrew Memory Game and gilyon's CPU and sound CPU tests. See
+NES, and gilyon's CPU and sound CPU tests for the SNES. See
 [public/roms/LICENSES.md](public/roms/LICENSES.md) for their authors and licenses.
 
 The screen has controls over its bottom edge, like a video player: run and pause, step a frame,
@@ -55,6 +55,12 @@ the user interacts with them.
 | Q / W | | L / R |
 | Enter | | Start |
 | Right Shift | | Select |
+
+Gamepads work too: the first is player 1, alongside the keyboard, and the second player 2. Their
+buttons are laid out like a SNES pad's, by where they are rather than their labels, and the left
+stick moves the D-pad. Browsers only show a gamepad once one of its buttons is pressed. See
+[docs/controllers.md](docs/controllers.md), and [docs/mobile.md](docs/mobile.md) for the plan for
+phones and tablets.
 
 | Key | Emulator |
 |---|---|
@@ -128,7 +134,6 @@ Tests sit next to the code they test as `*.test.ts`, with shared test code in `t
   and [65816](https://github.com/SingleStepTests/65816)) and blargg (Shay Green), via
   [christopherpow/nes-test-roms](https://github.com/christopherpow/nes-test-roms), and
   gilyon ([snes-tests](https://github.com/gilyon/snes-tests)).
-- [Memory Game](https://github.com/undisbeliever/memory-game) by The UnDisbeliever.
 
 ## License
 

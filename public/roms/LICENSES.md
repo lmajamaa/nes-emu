@@ -1,7 +1,7 @@
 # ROMs included with the emulator
 
-These are freely available homebrew and test ROMs, included with their authors' licenses. No
-commercial games are included.
+These are freely available test ROMs, included with their authors' licenses. No commercial games
+are included.
 
 ## `nestest.nes`
 
