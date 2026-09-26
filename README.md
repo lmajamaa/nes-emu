@@ -9,16 +9,16 @@ started in 2019 following javidx9's [NES emulator series](https://github.com/One
 ## Consoles
 
 - **NES**: the 6502 CPU, the PPU, all five sound channels and the common cartridge boards
-  (mappers 0, 1, 2, 3, 4, 7 and 9). See [docs/nes.md](docs/nes.md) for the details, what's
+  (mappers 0, 1, 2, 3, 4, 7 and 9). See [docs/001-nes.md](docs/001-nes.md) for the details, what's
   missing and the plan.
 - **SNES**: the 65816 CPU, the PPU with all background modes and mode 7, DMA and HDMA, and the
   SPC700 and DSP for sound. Cartridges with enhancement chips aren't supported yet. See
-  [docs/snes.md](docs/snes.md) for the details.
+  [docs/002-snes.md](docs/002-snes.md) for the details.
 
 Both have a debugger next to the screen, and keep games' battery-backed saves in the browser
 (IndexedDB) between sessions. The documents in `docs/` can also be read in the app, from the docs
 icon in the top right corner. Each has its own address, like
-`#/docs/docs/nes.md#progress`, to link to.
+`#/docs/docs/001-nes.md#progress`, to link to. The plans are numbered in the order they were made.
 
 ## Getting started
 
@@ -59,8 +59,12 @@ the user interacts with them.
 Gamepads work too: the first is player 1, alongside the keyboard, and the second player 2. Their
 buttons are laid out like a SNES pad's, by where they are rather than their labels, and the left
 stick moves the D-pad. Browsers only show a gamepad once one of its buttons is pressed. See
-[docs/controllers.md](docs/controllers.md), and [docs/mobile.md](docs/mobile.md) for the plan for
-phones and tablets.
+[docs/003-controllers.md](docs/003-controllers.md).
+
+On phones and tablets, a D-pad and the console's buttons appear around the screen: below it in
+portrait, beside it in landscape. The debugger starts hidden there, the `<>` button under the
+screen shows it, along with how long each frame takes to emulate. See
+[docs/004-mobile.md](docs/004-mobile.md).
 
 | Key | Emulator |
 |---|---|
@@ -99,7 +103,7 @@ A few tests are marked as known failures, which turn red if they start passing: 
 that needs a cycle-accurate CPU, one for a different MMC3 chip revision, and the unstable `LXA`
 opcode, whose result depends on the chip and differs between the SingleStepTests and the NES.
 - **Unit tests** for the PPU, sprites, APU channels, controllers and mappers.
-- **SNES** (see [docs/snes.md](docs/snes.md)): gilyon's test ROMs of the 65C816 and SPC-700,
+- **SNES** (see [docs/002-snes.md](docs/002-snes.md)): gilyon's test ROMs of the 65C816 and SPC-700,
   Tom Harte's 65816 and SPC700 SingleStepTests, and unit tests of the cartridge, bus, timing,
   DMA, PPU, APU and DSP.
 

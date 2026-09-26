@@ -52,8 +52,7 @@ describe('the project docs', () => {
 
     test('are the markdown files in the docs folder', () => {
         const paths = findDocs(ROOT);
-        expect(paths).toContain('docs/nes.md');
-        expect(paths).toContain('docs/snes.md');
+        expect(paths.slice(0, 4)).toEqual(['docs/001-nes.md', 'docs/002-snes.md', 'docs/003-controllers.md', 'docs/004-mobile.md']);
         expect(paths.every(path => /^docs\/[^/]+\.md$/.test(path))).toBe(true);
         expect(docs.map(doc => doc.path)).toEqual(paths);
     });

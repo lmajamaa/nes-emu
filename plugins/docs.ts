@@ -6,7 +6,7 @@ const DOCS_ID = 'virtual:docs';
 const RESOLVED_DOCS_ID = '\0' + DOCS_ID;
 
 export interface Doc {
-    // From the repository root, like docs/nes.md
+    // From the repository root, like docs/001-nes.md
     path: string;
     title: string;
     html: string;

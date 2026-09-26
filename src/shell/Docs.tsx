@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import docs from 'virtual:docs';
 
-// The docs have their own address, like #/docs/docs/nes.md#progress, so links and Back work
+// The docs have their own address, like #/docs/docs/001-nes.md#progress, so links and Back work
 const PREFIX = '#/docs/';
 
 export interface DocsRoute {

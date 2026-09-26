@@ -1,4 +1,4 @@
-# SNES emulation
+# SNES
 
 What the emulator does for the Super Nintendo Entertainment System, what it doesn't do yet, and
 the plan it was built by.

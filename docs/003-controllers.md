@@ -1,4 +1,4 @@
-# Controllers plan
+# Controllers
 
 Playing with gamepads as well as the keyboard, for both consoles, and with two players. The
 consoles already emulate two controller ports each, and the adapters take a player number in
