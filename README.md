@@ -62,8 +62,8 @@ stick moves the D-pad. Browsers only show a gamepad once one of its buttons is p
 [docs/003-controllers.md](docs/003-controllers.md).
 
 On phones and tablets, a D-pad and the console's buttons appear around the screen: below it in
-portrait, beside it in landscape. The debugger starts hidden there, the `<>` button under the
-screen shows it, along with how long each frame takes to emulate. See
+portrait, beside it in landscape. The debugger is left out there, and the gauge button under the
+screen shows how long each frame takes to emulate instead. See
 [docs/004-mobile.md](docs/004-mobile.md).
 
 | Key | Emulator |

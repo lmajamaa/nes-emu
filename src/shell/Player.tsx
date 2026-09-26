@@ -13,6 +13,8 @@ interface PlayerProps {
     volume: number;
     theater: boolean;
     fullscreen: boolean;
+    // Whether the full screen button does something, going full screen or explaining the alternative
+    fullscreenAvailable: boolean;
     // On touch screens a tap on the screen doesn't pause, and the controls stay shown
     touch: boolean;
     debuggerShown: boolean;
@@ -38,6 +40,7 @@ const ICONS = {
     sound: <Icon><path d="M4 9v6h4l5 5V4L8 9zM15.5 12a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM13 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z" /></Icon>,
     soundLow: <Icon><path d="M4 9v6h4l5 5V4L8 9zM15.5 12a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z" /></Icon>,
     muted: <Icon><path d="M4 9v6h4l5 5V4L8 9zM16.6 12l2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z" /></Icon>,
+    frameTime: <Icon><path d="M20.4 8.6l-1.2 1.8a8 8 0 0 1-.3 7.6H5.1A8 8 0 0 1 15.6 6.9l1.8-1.2A10 10 0 0 0 3.4 19a2 2 0 0 0 1.7 1h13.8a2 2 0 0 0 1.8-1 10 10 0 0 0-.3-10.4zm-9.8 6.8a2 2 0 0 0 2.8 0l5.7-8.5-8.5 5.7a2 2 0 0 0 0 2.8z" /></Icon>,
     theater: <Icon><path d="M3 7h18v10H3zm2 2v6h14V9z" /></Icon>,
     theaterOff: <Icon><path d="M6 8h12v8H6zm2 2v4h8v-4z" /></Icon>,
     fullscreen: <Icon><path d="M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z" /></Icon>,
@@ -121,9 +124,12 @@ const Player = (props: PlayerProps) => {
                     </div>
                 </div>
                 <span className="controlsSpacer" />
-                {button(debuggerShown ? 'Hide the debugger' : 'Show the debugger', ICONS.debugger, props.onToggleDebugger)}
+                {/* Touch screens have no room for the debugger, only for how long frames take */}
+                {touch
+                    ? button(debuggerShown ? 'Hide the frame time' : 'Show the frame time', ICONS.frameTime, props.onToggleDebugger)
+                    : button(debuggerShown ? 'Hide the debugger' : 'Show the debugger', ICONS.debugger, props.onToggleDebugger)}
                 {!touch && button(theater ? 'Default view (T)' : 'Theater mode (T)', theater ? ICONS.theaterOff : ICONS.theater, props.onToggleTheater)}
-                {document.fullscreenEnabled &&
+                {props.fullscreenAvailable &&
                     button(fullscreen ? 'Exit full screen' : 'Full screen', fullscreen ? ICONS.fullscreenOff : ICONS.fullscreen, props.onToggleFullscreen)}
             </div>
         </div>

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Button } from '../systems/nes/core/controller';
 import nes from '../systems/nes';
-import { dpadButtons } from './touch';
+import { distanceToRect, dpadButtons } from './touch';
 
 const dpad = nes.touchLayout.dpad;
 const at = (degrees: number, distance = 60) =>
@@ -32,5 +32,25 @@ describe('touch D-pad', () => {
     test('nothing near the middle', () => {
         expect(at(0, 10)).toBe(0);
         expect(at(90, 16)).toBe(Button.Down);
+    });
+
+    test('keeps pressing when the thumb drifts past the edge', () => {
+        expect(at(0, 400)).toBe(Button.Right);
+        expect(at(-45, 300)).toBe(Button.Right | Button.Up);
+    });
+});
+
+describe('distance to a button', () => {
+    const rect = { left: 100, top: 100, right: 160, bottom: 160 };
+
+    test('is 0 inside it', () => {
+        expect(distanceToRect(130, 130, rect)).toBe(0);
+        expect(distanceToRect(100, 160, rect)).toBe(0);
+    });
+
+    test('is to the nearest edge or corner outside it', () => {
+        expect(distanceToRect(170, 130, rect)).toBe(10);
+        expect(distanceToRect(130, 80, rect)).toBe(20);
+        expect(distanceToRect(163, 164, rect)).toBe(5);
     });
 });

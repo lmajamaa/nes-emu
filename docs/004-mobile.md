@@ -79,13 +79,21 @@ src/systems/
 - [x] 2. Layout and gestures. Below the screen in portrait, beside it in landscape, where the
   screen leaves 170px for each side. Phones on their side drop the header, so the console menu is
   back in portrait. On touch screens a tap doesn't pause, the video player's controls stay shown,
-  theater mode and the keyboard help are left out, and the debugger starts hidden: a button next
-  to theater mode shows it, and it's remembered. Full screen takes the touch controls along with
+  theater mode and the keyboard help are left out, and so are the debugger's panels, which need a
+  big screen: the button that shows them on a desktop shows only the frame time on a touch screen.
+  Full screen takes the touch controls along with
   the screen, and turns phones to landscape where the browser allows it (Chrome on Android). The
   browser pane it was tested in doesn't allow full screen, so that layout was checked with the
-  full screen styles put on by hand, and is still to be tried on a phone
-- [x] 3. Speed. With the debugger shown, a line under the screen gives the time a frame takes,
-  the slowest in the last second and the frames shown a second, e.g. "Frame 2.9 ms of 16.6 ms
-  (17%)". Hidden, the debugger isn't drawn at all. Real phones are still to be measured, which
-  decides milestone 4
-- [ ] 4. Web Worker
+  full screen styles put on by hand, and is still to be tried on a phone. iPhones can only show
+  videos full screen, so there the button explains adding the page to the Home Screen, which opens
+  it as an app without the browser's toolbars (`display: fullscreen` in the manifest, which iOS
+  shows as standalone). The page then goes under the notch and home indicator, and keeps clear of
+  them with the safe area insets
+- [x] Touch feel, after trying it on an iPhone: a finger that lands on the D-pad keeps pressing it
+  however far it drifts, like a thumb on a real one, and a finger that slips up to 24px off a
+  button still presses it
+- [x] 3. Speed. A button under the screen shows a line with the time a frame takes, the slowest
+  in the last second and the frames shown a second, e.g. "Frame 2.9 ms of 16.6 ms (17%)". On an
+  iPhone 18 Pro it runs at 60 fps, the SNES included
+- [ ] 4. Web Worker. Not needed on the iPhone measured. Left for slower phones, if they turn out
+  not to keep up

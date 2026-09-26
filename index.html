@@ -3,8 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#2C001E" />
+    <!-- Added to an iPhone's Home Screen, it opens without Safari's toolbars, as iPhones can't make a page full screen -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="nes-emu" />
     <meta name="description" content="A NES and SNES emulator that runs in the browser, with a debugger" />
     <link rel="manifest" href="/manifest.json" />
 

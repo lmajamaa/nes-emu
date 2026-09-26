@@ -18,6 +18,14 @@ const SAVE_CHECK_MS = 1000;
 const THEATER_KEY = 'theaterMode';
 const VOLUME_KEY = 'volume';
 const DEBUGGER_KEY = 'debugger';
+const HOME_SCREEN_TIP = 'This browser can’t show pages full screen on iPhone. To play without its toolbars, ' +
+    'add the emulator to your Home Screen from the Share menu, and open it from there.';
+
+// Opened from the Home Screen, as an app without the browser's toolbars
+function isInstalled(): boolean {
+    return matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ||
+        (navigator as Navigator & { standalone?: boolean }).standalone === true;
+}
 
 interface Game extends LoadResult {
     system: EmulatorSystem;
@@ -97,6 +105,8 @@ const App = () => {
     const [fullscreen, setFullscreen] = useState(false);
     // The connected gamepads' names, in player order
     const [padNames, setPadNames] = useState<string[]>([]);
+    // A note for the player that stays until closed
+    const [tip, setTip] = useState<string | null>(null);
     const touch = useTouchScreen();
     // Remembered, and hidden at first on touch screens, where there's little room for it
     const [debuggerShown, setDebuggerShown] = useState(() => {
@@ -254,6 +264,11 @@ const App = () => {
     // On touch screens the controls go full screen with the screen, turned to landscape where the
     // browser allows it, which Chrome on Android does in full screen
     const toggleFullscreen = useCallback(() => {
+        // iPhones can only show videos full screen, so the way there is adding the page to the Home Screen
+        if (!document.fullscreenEnabled) {
+            setTip(HOME_SCREEN_TIP);
+            return;
+        }
         if (document.fullscreenElement) {
             document.exitFullscreen();
             return;
@@ -478,7 +493,8 @@ const App = () => {
         return () => cancelAnimationFrame(requestId);
     }, [drawScreen]);
 
-    const Debugger = debuggerShown ? game?.emulator.Debugger : undefined;
+    // Only beside a big screen. On touch screens the same setting shows just the frame time.
+    const Debugger = debuggerShown && !touch ? game?.emulator.Debugger : undefined;
     // Touch screens place the screen between the touch controls instead
     const theaterLayout = theater && !touch;
     const screen = game && (
@@ -492,6 +508,7 @@ const App = () => {
                 volume={volume}
                 theater={theater}
                 fullscreen={fullscreen}
+                fullscreenAvailable={document.fullscreenEnabled || (touch && !isInstalled())}
                 touch={touch}
                 debuggerShown={debuggerShown}
                 onToggleRun={toggleRun}
@@ -546,6 +563,12 @@ const App = () => {
                 <ProjectInfo onOpenDocs={() => setDocsOpen(true)} />
             </header>
             {docsRoute && <DocsDialog route={docsRoute} onClose={() => setDocsOpen(false)} />}
+            {tip && (
+                <p className="message tip">
+                    {tip}
+                    <button className="button" onClick={() => setTip(null)}>OK</button>
+                </p>
+            )}
             {romError && <p className="message error">{romError}</p>}
             {game?.warning && <p className="message">{game.warning}</p>}
             {game ?
