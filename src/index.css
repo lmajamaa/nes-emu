@@ -750,6 +750,13 @@ html:has(.docs[open]) {
 /* Touch screens: the screen with a D-pad and buttons, below it in portrait and beside it in landscape */
 .gameArea.touch {
   margin: 12px;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.gameArea.touch .docs {
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .touchPlay {
@@ -758,9 +765,6 @@ html:has(.docs[open]) {
   grid-template-areas: "screen screen" "left right";
   gap: 16px 8px;
   touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
 }
 
 .touchScreen {
